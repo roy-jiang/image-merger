@@ -6,42 +6,50 @@
 <title>拼版台 · 图片拼接工具</title>
 <style>
 /* ============================================================
-   DARKROOM — a contact-sheet imposition table.
-   Warm near-black workspace, safelight amber accent, the print
-   (canvas) sits on a light table as the hero.
+   IMPOSITION STATION — a prepress ganging console.
+   Cool steel workspace; the white press sheet is the hero, dressed
+   like a real imposition proof: crop marks, a registration target,
+   a CMYK control strip. One functional accent: registration cyan.
    ============================================================ */
 :root{
-  /* Workspace surfaces — warm charcoals, never neutral gray */
-  --bg:          #100d0b;
-  --bg-panel:    #191512;
-  --bg-elev:     #221c17;
-  --bg-input:    #14100d;
-  --line:        #2c241e;
-  --line-strong: #3d3129;
+  /* Workspace surfaces — cool graphite, never warm */
+  --bg:        #121619;
+  --panel:     #171b1f;
+  --elev:      #1e242a;
+  --input:     #0e1215;
+  --line:      #252c33;
+  --line-2:    #333c45;
 
-  /* Ink — warm off-white to muted clay */
-  --ink:       #ece2d6;
-  --ink-dim:   #9d8f80;
-  --ink-faint: #6a5c4f;
+  /* Ink — cool off-white to slate */
+  --ink:       #e7ecef;
+  --ink-dim:   #8b96a0;
+  --ink-faint: #586570;
 
-  /* Safelight — the one saturated color in the room */
-  --safe:       #ff6b35;
-  --safe-hot:   #ff8355;
-  --safe-soft:  rgba(255,107,53,.12);
-  --safe-line:  rgba(255,107,53,.45);
-  --safe-glow:  rgba(255,107,53,.30);
+  /* Registration cyan — the one saturated working color */
+  --reg:       #25c7db;
+  --reg-hot:   #4ce0f0;
+  --reg-soft:  rgba(37,199,219,.12);
+  --reg-line:  rgba(37,199,219,.42);
+  --reg-glow:  rgba(37,199,219,.30);
 
-  --paper:  #ffffff;
-  --danger: #ff5b5b;
+  /* CMYK control strip — signature detail only */
+  --c: #22b4d6;
+  --m: #e5457f;
+  --y: #f2c744;
+  --k: #2a333b;
+
+  --sheet:  #ffffff;
+  --danger: #ff5b6e;
 
   --mono: ui-monospace,'SF Mono','JetBrains Mono','Cascadia Code',Menlo,Consolas,monospace;
   --sans: -apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
 
-  --r-sm: 5px; --r-md: 8px; --r-lg: 13px;
+  --r: 4px; --r-lg: 6px;
   --ease: cubic-bezier(.2,.8,.2,1);
 }
 
 *{margin:0;padding:0;box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{
   font-family:var(--sans);
@@ -50,20 +58,21 @@ body{
   overflow:hidden;
   -webkit-font-smoothing:antialiased;
 }
-::selection{background:var(--safe-glow);color:#fff}
+::selection{background:var(--reg-glow);color:#03252b}
 
-/* Custom scrollbars — thin, warm */
 ::-webkit-scrollbar{width:9px;height:9px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:6px;border:2px solid transparent;background-clip:content-box}
-::-webkit-scrollbar-thumb:hover{background:#4d4036;background-clip:content-box}
+::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:6px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:#44505b;background-clip:content-box}
+
+:focus-visible{outline:2px solid var(--reg);outline-offset:2px}
 
 .app{display:flex;height:100vh}
 
 /* ---------- SIDEBAR ---------- */
 .sidebar{
-  width:288px;flex-shrink:0;
-  background:var(--bg-panel);
+  width:300px;flex-shrink:0;
+  background:var(--panel);
   border-right:1px solid var(--line);
   display:flex;flex-direction:column;
 }
@@ -72,246 +81,287 @@ body{
   padding:16px 18px;
   border-bottom:1px solid var(--line);
 }
-.safelight-lamp{
-  width:11px;height:11px;border-radius:50%;
-  background:var(--safe);flex-shrink:0;
-  box-shadow:0 0 0 3px var(--safe-soft),0 0 14px 2px var(--safe-glow);
-  animation:pulse 3.2s var(--ease) infinite;
-}
-@keyframes pulse{
-  0%,100%{box-shadow:0 0 0 3px var(--safe-soft),0 0 10px 1px var(--safe-glow)}
-  50%    {box-shadow:0 0 0 4px var(--safe-soft),0 0 20px 4px var(--safe-glow)}
-}
-.brand .titles{line-height:1.25}
-.brand h1{font-size:14px;font-weight:650;letter-spacing:.2px;color:var(--ink)}
-.brand .sub{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:2px;margin-top:2px}
+.regmark{width:22px;height:22px;flex-shrink:0;color:var(--reg);animation:reg-in .8s var(--ease) both}
+@keyframes reg-in{from{opacity:0;transform:rotate(-25deg) scale(.7)}to{opacity:1;transform:none}}
+.brand .titles{line-height:1.2}
+.brand h1{font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:.5px;color:var(--ink)}
+.brand .sub{font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);letter-spacing:2.5px;margin-top:3px}
 
 /* ---------- UPLOAD ZONE ---------- */
 .upload{
-  margin:14px;padding:26px 16px;
-  border:1.5px dashed var(--line-strong);
+  margin:14px;padding:24px 16px;
+  border:1px dashed var(--line-2);
   border-radius:var(--r-lg);
   text-align:center;cursor:pointer;
-  background:
-    radial-gradient(120% 120% at 50% -10%, var(--safe-soft), transparent 60%),
-    var(--bg-input);
-  transition:border-color .2s var(--ease),transform .18s var(--ease),box-shadow .2s var(--ease);
+  background:var(--input);
+  transition:border-color .18s var(--ease),background .18s var(--ease);
 }
-.upload:hover{border-color:var(--safe-line);transform:translateY(-1px)}
+.upload:hover{border-color:var(--reg-line);background:#0f1519}
 .upload.dragover{
-  border-color:var(--safe);border-style:solid;
-  box-shadow:0 0 0 3px var(--safe-soft),0 0 26px var(--safe-glow) inset;
-  transform:scale(1.01);
+  border-color:var(--reg);border-style:solid;
+  box-shadow:0 0 0 3px var(--reg-soft),0 0 22px var(--reg-glow) inset;
 }
-.upload .glyph{
-  font-size:26px;line-height:1;color:var(--safe);
-  transition:transform .2s var(--ease);display:inline-block;
-}
-.upload:hover .glyph{transform:translateY(-2px)}
-.upload .lead{margin-top:10px;font-size:13px;color:var(--ink);font-weight:550}
-.upload .hint{margin-top:4px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.5px}
+.upload .glyph{font-size:22px;line-height:1;color:var(--reg)}
+.upload .lead{margin-top:9px;font-size:13px;color:var(--ink);font-weight:550}
+.upload .hint{margin-top:5px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.5px}
 
-/* ---------- CONTACT SHEET (image list) ---------- */
+/* ---------- PLATES (image list) ---------- */
 .sheet-head{
   display:flex;justify-content:space-between;align-items:baseline;
-  padding:6px 18px 8px;
+  padding:8px 18px 8px;
 }
-.sheet-head .label{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;color:var(--ink-faint)}
-.sheet-head .count{font-family:var(--mono);font-size:11px;color:var(--safe)}
+.sheet-head .label{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--ink-faint)}
+.sheet-head .count{font-family:var(--mono);font-size:11px;color:var(--reg);font-variant-numeric:tabular-nums}
 .list{flex:1;overflow-y:auto;padding:2px 10px 10px}
 .frame{
   display:flex;align-items:center;gap:10px;
-  padding:7px 8px;border-radius:var(--r-md);
+  padding:7px 8px;border-radius:var(--r);
   cursor:grab;position:relative;
   border:1px solid transparent;
-  transition:background .15s var(--ease),border-color .15s var(--ease);
+  transition:background .14s var(--ease),border-color .14s var(--ease);
 }
-.frame:hover{background:var(--bg-elev);border-color:var(--line)}
-.frame.selected{background:var(--safe-soft);border-color:var(--safe-line)}
+.frame:hover{background:var(--elev);border-color:var(--line)}
+.frame.selected{background:var(--reg-soft);border-color:var(--reg-line)}
 .frame.dragging{opacity:.35}
-.frame.drop-before{box-shadow:0 -2px 0 var(--safe)}
+.frame.drop-before{box-shadow:0 -2px 0 var(--reg)}
 .frame .no{
   font-family:var(--mono);font-size:10px;color:var(--ink-faint);
   width:20px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;
 }
-.frame.selected .no{color:var(--safe)}
+.frame.selected .no{color:var(--reg)}
 .frame .thumb{
-  width:42px;height:42px;object-fit:cover;border-radius:4px;
-  background:var(--bg-input);flex-shrink:0;
-  box-shadow:0 0 0 1px var(--line);
+  width:42px;height:42px;object-fit:cover;border-radius:2px;
+  background:var(--input);flex-shrink:0;
+  box-shadow:0 0 0 1px var(--line-2);
 }
+.frame .thumb.pending{display:flex;align-items:center;justify-content:center}
+.frame .thumb.pending::after{content:"⊕";color:var(--ink-faint);font-size:16px}
 .frame .meta{flex:1;min-width:0}
 .frame .name{font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .frame .dims{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:2px}
-.frame .kill{
+.frame .rot,.frame .kill{
   border:none;background:none;cursor:pointer;flex-shrink:0;
-  color:var(--ink-faint);font-size:15px;line-height:1;
-  width:24px;height:24px;border-radius:5px;
+  color:var(--ink-faint);line-height:1;
+  width:24px;height:24px;border-radius:var(--r);
   display:flex;align-items:center;justify-content:center;
-  transition:color .15s,background .15s;
+  transition:color .14s,background .14s;
 }
-.frame .kill:hover{color:var(--danger);background:rgba(255,91,91,.12)}
+.frame .rot{font-size:14px}
+.frame .kill{font-size:15px}
+.frame .rot:hover{color:var(--reg);background:var(--reg-soft)}
+.frame .kill:hover{color:var(--danger);background:rgba(255,91,110,.12)}
+.frame .rot .ico{display:inline-block}
+.frame .rot:active .ico{transform:rotate(20deg)}
+.frame .rot.spin{color:var(--reg)}
+.frame .rot.spin .ico{animation:rot-spin .34s var(--ease)}
+@keyframes rot-spin{from{transform:rotate(-90deg)}to{transform:rotate(0)}}
 
 .sidebar-foot{padding:12px;border-top:1px solid var(--line)}
 .btn-arrange{
-  width:100%;padding:11px;border-radius:var(--r-md);cursor:pointer;
+  width:100%;padding:11px;border-radius:var(--r);cursor:pointer;
   font-family:var(--sans);font-size:13px;font-weight:600;
-  color:var(--ink);background:var(--bg-elev);
-  border:1px solid var(--line-strong);
-  transition:all .16s var(--ease);
-  display:flex;align-items:center;justify-content:center;gap:7px;
+  color:var(--ink);background:var(--elev);
+  border:1px solid var(--line-2);
+  transition:all .15s var(--ease);
+  display:flex;align-items:center;justify-content:center;gap:8px;
 }
-.btn-arrange:hover{border-color:var(--safe-line);background:#2a221c;color:#fff}
+.btn-arrange .tick{font-family:var(--mono);color:var(--reg)}
+.btn-arrange:hover{border-color:var(--reg-line);background:#222a30;color:#fff}
 .btn-arrange:active{transform:translateY(1px)}
 .btn-arrange:disabled{opacity:.4;cursor:not-allowed;transform:none}
 
-/* ---------- MAIN + TOOLBAR ---------- */
+/* ---------- MAIN + CONSOLE ---------- */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.toolbar{
-  min-height:56px;display:flex;align-items:center;flex-wrap:wrap;
-  gap:12px;padding:0 16px;
-  background:var(--bg-panel);border-bottom:1px solid var(--line);
+.console{
+  min-height:56px;display:flex;align-items:center;flex-wrap:nowrap;
+  gap:11px;padding:0 16px;
+  background:var(--panel);border-bottom:1px solid var(--line);
+  overflow-x:auto;overflow-y:hidden;
 }
-.field{display:flex;align-items:center;gap:7px}
-.field > .lbl{font-size:12px;color:var(--ink-dim);white-space:nowrap}
-.toolbar select,.toolbar input[type=number]{
+.console::-webkit-scrollbar{height:0}
+.console > *{flex-shrink:0}
+.actions{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.field{display:flex;align-items:center;gap:8px}
+.field > .lbl{
+  font-family:var(--mono);font-size:10px;letter-spacing:1.5px;
+  color:var(--ink-faint);white-space:nowrap;
+  padding-left:8px;border-left:2px solid var(--line-2);
+}
+.console select,.console input[type=number]{
   font-family:var(--mono);font-size:12px;color:var(--ink);
-  background:var(--bg-input);border:1px solid var(--line-strong);
-  padding:6px 9px;border-radius:var(--r-sm);
-  transition:border-color .15s,box-shadow .15s;
+  background:var(--input);border:1px solid var(--line-2);
+  padding:6px 9px;border-radius:var(--r);
+  transition:border-color .14s,box-shadow .14s;
 }
-.toolbar select{cursor:pointer;padding-right:8px}
-.toolbar input[type=number]{width:66px;text-align:right}
-.toolbar select:focus,.toolbar input:focus{
-  outline:none;border-color:var(--safe);box-shadow:0 0 0 3px var(--safe-soft);
+.console select{cursor:pointer}
+.console input[type=number]{width:66px;text-align:right}
+.console select:focus,.console input:focus{
+  outline:none;border-color:var(--reg);box-shadow:0 0 0 3px var(--reg-soft);
 }
 .divider{width:1px;height:26px;background:var(--line)}
 .spacer{flex:1}
 
 .pager{display:flex;align-items:center;gap:8px}
 .pager button{
-  width:28px;height:28px;border-radius:var(--r-sm);cursor:pointer;
-  background:var(--bg-input);border:1px solid var(--line-strong);
+  width:28px;height:28px;border-radius:var(--r);cursor:pointer;
+  background:var(--input);border:1px solid var(--line-2);
   color:var(--ink);font-size:12px;
   display:flex;align-items:center;justify-content:center;
-  transition:all .15s var(--ease);
+  transition:all .14s var(--ease);
 }
-.pager button:hover:not(:disabled){border-color:var(--safe-line);color:#fff}
+.pager button:hover:not(:disabled){border-color:var(--reg-line);color:#fff}
 .pager button:disabled{opacity:.35;cursor:default}
 .pager .readout{font-family:var(--mono);font-size:12px;color:var(--ink-dim);min-width:52px;text-align:center;font-variant-numeric:tabular-nums}
 
+/* Material-yield gauge — the metric a prepress operator watches */
+.yield{display:flex;align-items:center;gap:9px}
+.yield .lbl{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;color:var(--ink-faint)}
+.yield .track{width:52px;height:5px;background:var(--line);border-radius:3px;overflow:hidden}
+.yield .fill{height:100%;width:0;background:linear-gradient(90deg,var(--reg),var(--reg-hot));transition:width .3s var(--ease)}
+.yield .pct{font-family:var(--mono);font-size:12px;color:var(--reg);min-width:38px;text-align:right;font-variant-numeric:tabular-nums}
+
 .btn{
-  padding:8px 15px;border-radius:var(--r-md);cursor:pointer;border:1px solid transparent;
+  padding:8px 15px;border-radius:var(--r);cursor:pointer;border:1px solid transparent;
   font-family:var(--sans);font-size:12.5px;font-weight:600;
   display:inline-flex;align-items:center;gap:6px;
-  transition:all .16s var(--ease);
+  transition:all .15s var(--ease);
 }
 .btn:active{transform:translateY(1px)}
-.btn-ghost{background:var(--bg-elev);border-color:var(--line-strong);color:var(--ink)}
-.btn-ghost:hover{border-color:var(--safe-line);background:#2a221c}
-.btn-primary{background:var(--safe);color:#160b05;box-shadow:0 2px 14px var(--safe-glow)}
-.btn-primary:hover{background:var(--safe-hot);box-shadow:0 3px 20px var(--safe-glow)}
+.btn-ghost{background:var(--elev);border-color:var(--line-2);color:var(--ink)}
+.btn-ghost:hover{border-color:var(--reg-line);background:#222a30}
+.btn-primary{background:var(--reg);color:#04252b;box-shadow:0 2px 14px var(--reg-glow)}
+.btn-primary:hover{background:var(--reg-hot);box-shadow:0 3px 20px var(--reg-glow)}
 .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
 
-/* ---------- WORKSPACE (canvas hero) ---------- */
+/* ---------- WORKSPACE (press sheet hero) ---------- */
 .workspace{
   flex:1;overflow:auto;position:relative;
-  display:flex;align-items:center;justify-content:center;padding:48px;
+  display:flex;align-items:center;justify-content:center;padding:64px;
   background:
-    radial-gradient(80% 60% at 50% 40%, rgba(255,107,53,.045), transparent 70%),
-    radial-gradient(circle at center, var(--bg) 0%, #0a0806 100%);
-  background-attachment:local;
+    radial-gradient(70% 55% at 50% 42%, rgba(37,199,219,.05), transparent 70%),
+    var(--bg);
 }
-/* faint light-table grid */
+/* faint engineering grid */
 .workspace::before{
   content:"";position:absolute;inset:0;pointer-events:none;
   background-image:
     linear-gradient(var(--line) 1px,transparent 1px),
     linear-gradient(90deg,var(--line) 1px,transparent 1px);
-  background-size:44px 44px;opacity:.14;
-}
-canvas{
-  display:block;position:relative;z-index:1;
-  background:var(--paper);
-  box-shadow:0 0 0 1px rgba(255,255,255,.06),0 24px 60px rgba(0,0,0,.6),0 4px 16px rgba(0,0,0,.5);
-  transition:width .16s var(--ease),height .16s var(--ease);
+  background-size:48px 48px;opacity:.12;
 }
 
-/* Empty state — direction, not a blank box */
+/* the sheet wrapper shrink-wraps the canvas; proof marks hang off it */
+.sheet{position:relative;display:inline-block;line-height:0;font-size:0;z-index:1;animation:sheet-in .45s var(--ease) both}
+@keyframes sheet-in{from{opacity:0;transform:translateY(6px) scale(.995)}to{opacity:1;transform:none}}
+canvas{
+  display:block;background:var(--sheet);
+  box-shadow:0 0 0 1px rgba(255,255,255,.05),0 26px 64px rgba(0,0,0,.55),0 4px 16px rgba(0,0,0,.45);
+}
+
+/* crop marks — hairline L's just outside each corner (constant screen size) */
+.crop{position:absolute;width:16px;height:16px;pointer-events:none}
+.crop::before,.crop::after{content:"";position:absolute;background:var(--ink-faint)}
+.crop::before{width:16px;height:1px}
+.crop::after{width:1px;height:16px}
+.crop.tl{top:-9px;left:-9px}    .crop.tl::before{bottom:0;left:0} .crop.tl::after{bottom:0;left:0}
+.crop.tr{top:-9px;right:-9px}   .crop.tr::before{bottom:0;right:0} .crop.tr::after{bottom:0;right:0}
+.crop.bl{bottom:-9px;left:-9px} .crop.bl::before{top:0;left:0}    .crop.bl::after{top:0;left:0}
+.crop.br{bottom:-9px;right:-9px}.crop.br::before{top:0;right:0}   .crop.br::after{top:0;right:0}
+
+/* registration target above the sheet */
+.reg-target{position:absolute;top:-34px;left:50%;transform:translateX(-50%);width:20px;height:20px;color:var(--ink-faint);pointer-events:none}
+
+/* CMYK control strip below the sheet — the calibration signature */
+.cmyk{position:absolute;bottom:-26px;left:0;display:flex;align-items:center;gap:5px;pointer-events:none}
+.cmyk i{width:13px;height:13px;display:block;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.cmyk .lbl{margin-left:6px;font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--ink-faint);line-height:13px}
+
+/* Empty state */
 .empty{
   position:absolute;inset:0;z-index:2;pointer-events:none;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
-  text-align:center;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;
 }
-.empty .mark{
-  font-size:52px;color:var(--line-strong);
-  filter:drop-shadow(0 0 20px rgba(255,107,53,.15));
-}
+.empty .mark{color:var(--line-2);filter:drop-shadow(0 0 20px rgba(37,199,219,.14))}
 .empty h2{font-size:16px;color:var(--ink-dim);font-weight:600}
-.empty p{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.5px}
+.empty p{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.4px}
 
 /* Zoom cluster */
 .zoom{
   position:absolute;bottom:20px;right:20px;z-index:6;
   display:flex;align-items:center;gap:6px;
-  background:rgba(20,16,13,.85);backdrop-filter:blur(8px);
-  border:1px solid var(--line-strong);border-radius:10px;padding:5px;
+  background:rgba(14,18,21,.85);backdrop-filter:blur(8px);
+  border:1px solid var(--line-2);border-radius:8px;padding:5px;
 }
 .zoom button{
-  width:30px;height:30px;border-radius:6px;cursor:pointer;
+  width:30px;height:30px;border-radius:var(--r);cursor:pointer;
   background:transparent;border:none;color:var(--ink);font-size:15px;
   display:flex;align-items:center;justify-content:center;
-  transition:background .15s,color .15s;
+  transition:background .14s,color .14s;
 }
-.zoom button:hover{background:var(--bg-elev);color:var(--safe)}
-.zoom .pct{
-  font-family:var(--mono);font-size:11px;color:var(--ink-dim);
-  min-width:44px;text-align:center;font-variant-numeric:tabular-nums;
-}
+.zoom button:hover{background:var(--elev);color:var(--reg)}
+.zoom .pct{font-family:var(--mono);font-size:11px;color:var(--ink-dim);min-width:44px;text-align:center;font-variant-numeric:tabular-nums}
 
 /* Toast */
 .toast-wrap{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:50;display:flex;flex-direction:column;gap:8px;align-items:center}
 .toast{
   font-family:var(--mono);font-size:12px;
-  background:var(--bg-elev);border:1px solid var(--danger);
-  color:var(--ink);padding:9px 16px;border-radius:8px;
+  background:var(--elev);border:1px solid var(--danger);
+  color:var(--ink);padding:9px 16px;border-radius:var(--r);
   box-shadow:0 8px 30px rgba(0,0,0,.5);
   animation:toast-in .25s var(--ease);
 }
 @keyframes toast-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ---------- Responsive ---------- */
+@media (max-width:900px){
+  body{overflow:auto}
+  .app{flex-direction:column;height:auto;min-height:100vh}
+  .sidebar{width:100%;border-right:none;border-bottom:1px solid var(--line)}
+  .list{max-height:200px}
+  .workspace{min-height:60vh;padding:40px}
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important;transition:none!important}
+}
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
-      <div class="safelight-lamp"></div>
+      <svg class="regmark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="1.6"/>
+        <line x1="12" y1="1" x2="12" y2="23" stroke="currentColor" stroke-width="1.2"/>
+        <line x1="1" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="1.2"/>
+      </svg>
       <div class="titles">
-        <h1>图片拼版台</h1>
-        <div class="sub">CONTACT&nbsp;SHEET</div>
+        <h1>拼版台</h1>
+        <div class="sub">IMPOSITION&nbsp;STATION</div>
       </div>
     </div>
 
     <div class="upload" id="uploadZone">
-      <div class="glyph">◈</div>
-      <div class="lead">点击选择，或把图片拖进来</div>
+      <div class="glyph">⊕</div>
+      <div class="lead">拖入图片，或点击导入</div>
       <div class="hint">PNG · JPG · WEBP · 支持多选</div>
       <input type="file" id="fileInput" multiple accept="image/*" hidden>
     </div>
 
     <div class="sheet-head">
-      <span class="label">FRAMES</span>
-      <span class="count" id="frameCount">0</span>
+      <span class="label">版件 · PLATES</span>
+      <span class="count" id="frameCount">00</span>
     </div>
     <div class="list" id="list"></div>
 
     <div class="sidebar-foot">
-      <button class="btn-arrange" id="btnArrange" disabled>✦ 重新排版</button>
+      <button class="btn-arrange" id="btnArrange" disabled><span class="tick">⊕</span> 自动拼版</button>
     </div>
   </aside>
 
   <main class="main">
-    <div class="toolbar">
+    <div class="console">
       <div class="field">
         <span class="lbl">纸张</span>
         <select id="presetSelect">
@@ -327,11 +377,12 @@ canvas{
       <div class="divider"></div>
 
       <div class="field">
-        <span class="lbl">排版</span>
+        <span class="lbl">拼版</span>
         <select id="layoutSelect">
-          <option value="shelf">行排列 Shelf</option>
+          <option value="shelf">齐行 Justified</option>
           <option value="vertical">垂直堆叠 Vertical</option>
-          <option value="maxrects">矩形填充 MaxRects</option>
+          <option value="horizontal">横排 Horizontal</option>
+          <option value="maxrects">矩形密排 MaxRects</option>
           <option value="auto">自动最优 Auto</option>
         </select>
       </div>
@@ -345,6 +396,21 @@ canvas{
 
       <div class="divider"></div>
 
+      <div class="field">
+        <span class="lbl">页数</span>
+        <select id="pagesSelect">
+          <option value="auto">自动</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+        </select>
+      </div>
+
+      <div class="divider"></div>
+
       <div class="pager">
         <button id="btnPrevPage" disabled title="上一页">◀</button>
         <span class="readout" id="pageInfo">1 / 1</span>
@@ -353,17 +419,49 @@ canvas{
 
       <div class="spacer"></div>
 
-      <button class="btn btn-ghost" id="btnExportAll" disabled>导出全部页</button>
-      <button class="btn btn-primary" id="btnExport" disabled>导出当前页</button>
+      <div class="yield" title="当前页图片面积占纸张的比例">
+        <span class="lbl">用料率</span>
+        <span class="track"><span class="fill" id="yieldBar"></span></span>
+        <span class="pct" id="yieldPct">—</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="actions">
+        <button class="btn btn-ghost" id="btnExportAll" disabled>导出全部页</button>
+        <button class="btn btn-primary" id="btnExport" disabled>导出当前页</button>
+      </div>
     </div>
 
     <div class="workspace" id="workspace">
-      <canvas id="canvas"></canvas>
-      <div class="empty" id="emptyState">
-        <div class="mark">◈</div>
-        <h2>把图片拖进来，开始拼版</h2>
-        <p>选好后会自动排布到纸张上，可拖动与缩放微调</p>
+      <div class="sheet">
+        <canvas id="canvas"></canvas>
+        <div id="proofMarks">
+          <span class="crop tl"></span><span class="crop tr"></span>
+          <span class="crop bl"></span><span class="crop br"></span>
+          <svg class="reg-target" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="1.4"/>
+            <line x1="12" y1="1" x2="12" y2="23" stroke="currentColor" stroke-width="1"/>
+            <line x1="1" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="1"/>
+          </svg>
+          <div class="cmyk">
+            <i style="background:var(--c)"></i><i style="background:var(--m)"></i>
+            <i style="background:var(--y)"></i><i style="background:var(--k)"></i>
+            <span class="lbl">CMYK</span>
+          </div>
+        </div>
       </div>
+
+      <div class="empty" id="emptyState">
+        <svg class="mark" width="56" height="56" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.2"/>
+          <line x1="12" y1="0" x2="12" y2="24" stroke="currentColor" stroke-width="1"/>
+          <line x1="0" y1="12" x2="24" y2="12" stroke="currentColor" stroke-width="1"/>
+        </svg>
+        <h2>拖入图片，开始拼版</h2>
+        <p>自动排布到纸张 · 拖动/缩放/顶部圆点自由旋转 · 支持多页导出</p>
+      </div>
+
       <div class="zoom">
         <button id="btnZoomOut" title="缩小">−</button>
         <span class="pct" id="zoomInfo">100%</span>
@@ -383,23 +481,28 @@ canvas{
    STATE
    ============================================================ */
 const state = {
-  images: [],            // { id, name, img, origW, origH }
+  images: [],            // { id, name, img, origW, origH, angle }
   canvasW: 2480,
   canvasH: 3508,
   layout: "shelf",
   padding: 10,
+  targetPages: 0,        // 0 = auto (paginate on overflow); N = force exactly N pages
   zoom: 0.25,
   selectedId: null,
   currentPage: 0,
   totalPages: 1,
-  pages: [[]],           // pages[p] = [ { id, x, y, w, h } ] in canvas px, page-relative y
-  drag: null,            // { mode:'move'|'resize', handle, startX, startY, origin }
+  pages: [[]],           // pages[p] = [ { id, x, y, w, h, angle } ] in canvas px, page-relative y
+  drag: null,            // { mode:'move'|'resize'|'rotate', ... }
+  justRotated: null,     // id of the plate whose ↻ icon should spin on next renderList
   nextId: 1,
 };
 
 const MIN_SIZE = 24;     // smallest allowed placement, in canvas px
 const HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
 const CORNERS = new Set(["nw", "ne", "se", "sw"]);
+const ROT_GAP = 26;      // rotation knob distance above the top edge, in screen px
+const SEL = "#25c7db";   // registration cyan — selection outline / handles
+const CARDINAL_SNAP = 7; // free-rotate magnetically locks within ±this of 0/90/180/270
 
 /* ============================================================
    DOM SHORTCUTS
@@ -442,33 +545,42 @@ function addFiles(fileList) {
   const files = Array.from(fileList).filter(f => f.type.startsWith("image/"));
   const rejected = fileList.length - files.length;
   if (rejected > 0) toast(`已跳过 ${rejected} 个非图片文件`);
-  files.forEach(loadImageFile);
+  // Reserve list slots synchronously so images keep the order they were chosen,
+  // regardless of which file finishes decoding first.
+  const records = files.map(file => ({
+    id: state.nextId++,
+    name: file.name,
+    img: null,
+    origW: 0,
+    origH: 0,
+    angle: 0,
+    file,
+  }));
+  state.images.push(...records);
+  renderList();
+  records.forEach(loadImageRecord);
 }
 
-function loadImageFile(file) {
+function loadImageRecord(rec) {
   const reader = new FileReader();
-  reader.onerror = () => toast(`无法读取「${file.name}」`);
+  reader.onerror = () => { toast(`无法读取「${rec.name}」`); removeImage(rec.id); };
   reader.onload = ev => {
     const img = new Image();
-    img.onerror = () => toast(`无法解码「${file.name}」`);
+    img.onerror = () => { toast(`无法解码「${rec.name}」`); removeImage(rec.id); };
     img.onload = () => {
-      state.images.push({
-        id: state.nextId++,
-        name: file.name,
-        img,
-        origW: img.naturalWidth,
-        origH: img.naturalHeight,
-      });
+      rec.img = img;
+      rec.origW = img.naturalWidth;
+      rec.origH = img.naturalHeight;
       renderList();
       arrange();
     };
     img.src = ev.target.result;
   };
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(rec.file);
 }
 
 /* ============================================================
-   CONTACT SHEET (image list + reordering)
+   PLATES (image list + reordering)
    ============================================================ */
 function renderList() {
   const list = $("list");
@@ -480,15 +592,26 @@ function renderList() {
     frame.className = "frame" + (image.id === state.selectedId ? " selected" : "");
     frame.draggable = true;
     frame.dataset.index = index;
+    const thumb = image.img
+      ? `<img class="thumb" src="${image.img.src}" alt="">`
+      : `<div class="thumb pending"></div>`;
+    const dims = image.img
+      ? `${image.origW}×${image.origH}${image.angle ? ` · ↻${Math.round(image.angle)}°` : ""}`
+      : `载入中…`;
     frame.innerHTML =
       `<span class="no">${String(index + 1).padStart(2, "0")}</span>` +
-      `<img class="thumb" src="${image.img.src}" alt="">` +
+      thumb +
       `<div class="meta">` +
         `<div class="name">${escapeHtml(image.name)}</div>` +
-        `<div class="dims">${image.origW}×${image.origH}</div>` +
+        `<div class="dims">${dims}</div>` +
       `</div>` +
+      `<button class="rot${image.id === state.justRotated ? " spin" : ""}" title="旋转 90°"><span class="ico">↻</span></button>` +
       `<button class="kill" title="移除">✕</button>`;
 
+    frame.querySelector(".rot").addEventListener("click", e => {
+      e.stopPropagation();
+      rotateImage(image.id);
+    });
     frame.querySelector(".kill").addEventListener("click", e => {
       e.stopPropagation();
       removeImage(image.id);
@@ -501,7 +624,10 @@ function renderList() {
       e.dataTransfer.effectAllowed = "move";
       frame.classList.add("dragging");
     });
-    frame.addEventListener("dragend", () => frame.classList.remove("dragging"));
+    frame.addEventListener("dragend", () => {
+      frame.classList.remove("dragging");
+      list.querySelectorAll(".drop-before").forEach(f => f.classList.remove("drop-before"));
+    });
     frame.addEventListener("dragover", e => { e.preventDefault(); frame.classList.add("drop-before"); });
     frame.addEventListener("dragleave", () => frame.classList.remove("drop-before"));
     frame.addEventListener("drop", e => {
@@ -516,6 +642,7 @@ function renderList() {
 
   const hasImages = state.images.length > 0;
   $("btnArrange").disabled = !hasImages;
+  state.justRotated = null; // one-shot: the spin has been applied to this render
 }
 
 function removeImage(id) {
@@ -524,6 +651,32 @@ function removeImage(id) {
   renderList();
   arrange();
 }
+
+/* Snap-rotate an image by 90° CW (sidebar ↻ button / R key). Rotation is a pure
+   visual transform around the placement center — it doesn't reflow the layout —
+   and it's stored on the image so it survives a re-arrange. Free-angle rotation
+   lives on the canvas rotation handle (see the pointer handlers). */
+function rotateImage(id) {
+  const m = state.images.find(x => x.id === id);
+  if (!m || !m.img) return;
+  m.angle = normAngle((m.angle || 0) + 90);
+  syncAngle(id);
+  state.justRotated = id; // let renderList spin this plate's ↻ icon once
+  renderList();
+  renderCanvas();
+}
+
+/* Push an image's angle onto whichever placement holds it, on any page */
+function syncAngle(id) {
+  const m = state.images.find(x => x.id === id);
+  if (!m) return;
+  for (const pg of state.pages) {
+    const it = pg.find(p => p.id === id);
+    if (it) it.angle = m.angle || 0;
+  }
+}
+
+function normAngle(a) { return ((a % 360) + 360) % 360; }
 
 function reorderImage(from, to) {
   if (Number.isNaN(from) || from === to) return;
@@ -554,7 +707,7 @@ function escapeHtml(s) {
 }
 
 /* ============================================================
-   TOOLBAR
+   CONSOLE (toolbar)
    ============================================================ */
 $("presetSelect").addEventListener("change", e => {
   const preset = e.target.value;
@@ -569,7 +722,15 @@ $("presetSelect").addEventListener("change", e => {
 $("canvasW").addEventListener("input", () => setCanvasSize(readInt($("canvasW"), 2480), state.canvasH));
 $("canvasH").addEventListener("input", () => setCanvasSize(state.canvasW, readInt($("canvasH"), 3508)));
 $("layoutSelect").addEventListener("change", e => { state.layout = e.target.value; arrange(); });
+$("pagesSelect").addEventListener("change", e => {
+  state.targetPages = e.target.value === "auto" ? 0 : parseInt(e.target.value, 10);
+  arrange();
+});
 $("paddingInput").addEventListener("input", e => { state.padding = clamp(readInt(e.target, 0), 0, 500); arrange(); });
+// Snap fields back to the clamped state value once editing settles
+$("canvasW").addEventListener("change", () => { $("canvasW").value = state.canvasW; });
+$("canvasH").addEventListener("change", () => { $("canvasH").value = state.canvasH; });
+$("paddingInput").addEventListener("change", () => { $("paddingInput").value = state.padding; });
 $("btnArrange").addEventListener("click", arrange);
 $("btnPrevPage").addEventListener("click", () => goToPage(state.currentPage - 1));
 $("btnNextPage").addEventListener("click", () => goToPage(state.currentPage + 1));
@@ -614,7 +775,7 @@ function setZoom(z) {
 
 function fitZoom() {
   const area = $("workspace");
-  const pad = 96;
+  const pad = 128;
   const zw = (area.clientWidth - pad) / state.canvasW;
   const zh = (area.clientHeight - pad) / state.canvasH;
   state.zoom = clamp(Math.min(zw, zh, 1), 0.03, 4);
@@ -641,54 +802,132 @@ function arrange() {
     updatePager();
     return;
   }
-  const placed = state.layout === "auto" ? layoutAuto() : runLayout(state.layout);
+  // Lay out on each image's rotated bounding box, so a rotated image reserves the
+  // space it actually occupies. Then re-center the real image inside that slot.
+  const inputs = state.images.map(m => {
+    const d = effLayoutDims(m);
+    return { id: m.id, origW: d.w, origH: d.h };
+  });
+  const placed = state.targetPages >= 1
+    ? layoutForcedPages(inputs, state.targetPages)
+    : (state.layout === "auto" ? layoutAuto(inputs) : runLayout(state.layout, inputs));
+  for (const p of placed) {
+    const m = state.images.find(im => im.id === p.id);
+    p.angle = m ? (m.angle || 0) : 0;
+    if (m) {
+      const d = effLayoutDims(m);
+      const k = d.w > 0 ? p.w / d.w : 1;        // uniform scale the layout applied
+      const fw = m.origW * k, fh = m.origH * k; // the image's own (un-rotated) footprint
+      p.x += (p.w - fw) / 2;                     // center it within the reserved slot
+      p.y += (p.h - fh) / 2;
+      p.w = fw;
+      p.h = fh;
+    }
+  }
   paginate(placed);
   updateExportButtons();
   renderCanvas();
   updatePager();
 }
 
-function runLayout(mode, images = state.images, cw = state.canvasW, ch = state.canvasH, pad = state.padding) {
+function runLayout(mode, images = state.images, cw = state.canvasW, ch = state.canvasH, pad = state.padding, pageAware = true) {
   const availW = cw - pad * 2;
   if (availW <= 0) return []; // padding swallows the page — nothing placeable
   switch (mode) {
-    case "vertical": return layoutVertical(images, cw, pad, availW);
-    case "maxrects": return layoutMaxRects(images, cw, ch, pad);
+    case "vertical":   return layoutVertical(images, cw, ch, pad, availW, pageAware);
+    case "horizontal": return layoutHorizontal(images, cw, ch, pad, availW, pageAware);
+    case "maxrects":   return layoutMaxRects(images, cw, ch, pad, pageAware);
     case "shelf":
-    default:         return layoutShelf(images, cw, pad, availW);
+    default:           return layoutShelf(images, cw, ch, pad, availW, pageAware);
   }
 }
 
-/* Vertical — one image per row, full available width */
-function layoutVertical(images, cw, pad, availW) {
+/* Layout footprint = the axis-aligned bounding box of the image's natural
+   rectangle rotated by its angle. Cardinal turns (90/270) swap W/H exactly;
+   arbitrary angles reserve the larger diagonal box so nothing overlaps. */
+function effLayoutDims(m) {
+  const a = (m.angle || 0) * Math.PI / 180;
+  const c = Math.abs(Math.cos(a)), s = Math.abs(Math.sin(a));
+  return { w: m.origW * c + m.origH * s, h: m.origW * s + m.origH * c };
+}
+
+/* When flowing top-down, keep an item from straddling a page boundary by bumping
+   it to the top of the next page. Items taller than a whole page (and the
+   non-paginated Auto pass) are left alone — they can't be made to fit. */
+function pageAdvance(y, h, ch, pad, pageAware) {
+  if (!pageAware || h > ch) return y;
+  const page = Math.floor(y / ch);
+  if (page !== Math.floor((y + h - 1e-6) / ch)) return (page + 1) * ch + pad;
+  return y;
+}
+
+/* Vertical — one image per row, stacked top→down. Each image fills the width but
+   is capped to the page height so it never overflows; too-tall images shrink to
+   fit and center horizontally. Page-breaks when the next image won't fit. */
+function layoutVertical(images, cw, ch, pad, availW, pageAware) {
+  const availH = ch - pad * 2;
   const placed = [];
   let y = pad;
   for (const m of images) {
     if (m.origW <= 0 || m.origH <= 0) continue;
-    const h = (availW / m.origW) * m.origH;
-    placed.push({ id: m.id, x: pad, y, w: availW, h });
+    let w = availW, h = (availW / m.origW) * m.origH;
+    if (h > availH) { h = availH; w = (availH / m.origH) * m.origW; } // fit within the page box
+    const x = pad + (availW - w) / 2; // center horizontally when narrower than the sheet
+    y = pageAdvance(y, h, ch, pad, pageAware);
+    placed.push({ id: m.id, x, y, w, h });
     y += h + pad;
   }
   return placed;
 }
 
-/* Shelf — greedily fill rows; break a row when adding an image would
-   shrink the row height too aggressively */
-function layoutShelf(images, cw, pad, availW) {
+/* Horizontal — a uniform-height filmstrip: every image shares one row height and
+   flows left→right, wrapping to a new row when the width is full and breaking to a
+   new page when a row won't fit. Consistent sizes, all images shown, no overflow. */
+function layoutHorizontal(images, cw, ch, pad, availW, pageAware) {
+  const availH = ch - pad * 2;
+  const valid = images.filter(m => m.origW > 0 && m.origH > 0);
+  if (!valid.length) return [];
+  // Shared height ⇒ ~√n columns of average-aspect images per row, capped to the page
+  const cols = Math.min(6, Math.max(1, Math.round(Math.sqrt(valid.length))));
+  const avgAsp = valid.reduce((s, m) => s + m.origW / m.origH, 0) / valid.length;
+  const H = Math.min(availH, availW / (cols * avgAsp));
+
+  const placed = [];
+  let x = pad, y = pageAdvance(pad, H, ch, pad, pageAware);
+  for (const m of valid) {
+    let h = H, w = H * (m.origW / m.origH);
+    if (w > availW) { w = availW; h = availW * (m.origH / m.origW); } // lone extra-wide image
+    if (x > pad && x + w > pad + availW) {            // row is full → wrap
+      x = pad; y = pageAdvance(y + H + pad, H, ch, pad, pageAware);
+    }
+    placed.push({ id: m.id, x, y: y + (H - h) / 2, w, h });
+    x += w + pad;
+  }
+  return placed;
+}
+
+/* Shelf — justified rows (contact-sheet / Google-Photos style). Fill a row until
+   justifying it to the full width would drop the row height to a target, then
+   commit it flush to both edges. Rows come out even and the sheet fills tightly.
+   Target height ⇒ ~√n columns, so image size scales sensibly with the count. */
+function layoutShelf(images, cw, ch, pad, availW, pageAware) {
+  const valid = images.filter(m => m.origW > 0 && m.origH > 0);
   const placed = [];
   let curY = pad;
-  let row = [];
 
-  const rowHeight = items => {
-    const gaps = Math.max(0, items.length - 1) * pad;
-    const sumRatio = items.reduce((s, m) => s + (m.origH > 0 ? m.origW / m.origH : 0), 0);
-    return sumRatio > 0 ? (availW - gaps) / sumRatio : 0;
-  };
+  const availH = ch - pad * 2;
+  const cols = Math.min(6, Math.max(1, Math.round(Math.sqrt(valid.length))));
+  const target = availW / cols;
 
-  const flush = () => {
-    if (row.length === 0) return;
-    const h = rowHeight(row);
+  let row = [], aspSum = 0;
+  const justifiedH = () => (availW - Math.max(0, row.length - 1) * pad) / aspSum;
+  const commit = justify => {
+    if (!row.length) return;
+    // A trailing partial row keeps the target height rather than stretching tall;
+    // cap to the page height so a lone tall row can never overflow the sheet.
+    const h = Math.min(justify ? justifiedH() : Math.min(justifiedH(), target), availH);
     if (h > 0) {
+      curY = pageAdvance(curY, h, ch, pad, pageAware);
       let x = pad;
       for (const m of row) {
         const w = (h / m.origH) * m.origW;
@@ -697,88 +936,100 @@ function layoutShelf(images, cw, pad, availW) {
       }
       curY += h + pad;
     }
-    row = [];
+    row = []; aspSum = 0;
   };
 
-  for (const m of images) {
-    if (m.origW <= 0 || m.origH <= 0) continue;
-    if (row.length > 0) {
-      const before = rowHeight(row);
-      const after = rowHeight([...row, m]);
-      if (before > 0 && after < before * 0.7) flush();
-    }
+  for (const m of valid) {
     row.push(m);
+    aspSum += m.origW / m.origH;
+    if (justifiedH() <= target) commit(true); // row is full at the target height
   }
-  flush();
+  commit(false); // leftover images
   return placed;
 }
 
-/* MaxRects — rectangle packing (best short-side fit), overflow stacks below */
+/* MaxRects — true maximal-rectangles packing at a single uniform scale, binary
+   searched to be as large as possible while every image still fits the sheet.
+   One shared scale means no image dominates the page. Single page by design
+   (a rectangle packer's job is to cram everything onto one sheet). */
 function layoutMaxRects(images, cw, ch, pad) {
-  const placed = [];
-  const availW = cw - pad * 2;
-  const sorted = [...images]
-    .filter(m => m.origW > 0 && m.origH > 0)
-    .sort((a, b) => Math.max(b.origW, b.origH) - Math.max(a.origW, a.origH));
+  const valid = images.filter(m => m.origW > 0 && m.origH > 0);
+  if (!valid.length) return [];
+  // Pack biggest-first (by longest side) — leaves cleaner free space
+  const order = [...valid].sort((a, b) => Math.max(b.origW, b.origH) - Math.max(a.origW, a.origH));
 
-  let freeRects = [{ x: pad, y: pad, w: availW, h: ch - pad * 2 }];
+  const usableW = cw - pad * 2, usableH = ch - pad * 2;
+  // Upper bound on scale: perfect area fill, capped so the largest image fits
+  const imgArea = valid.reduce((s, m) => s + m.origW * m.origH, 0);
+  let hi = Math.sqrt((usableW * usableH) / imgArea);
+  for (const m of valid) hi = Math.min(hi, usableW / m.origW, usableH / m.origH);
+  hi *= 1.02;
 
-  for (const m of sorted) {
-    let bestScore = Infinity, bestRect = null, bestIdx = -1;
-    for (let i = 0; i < freeRects.length; i++) {
-      const fr = freeRects[i];
-      const scale = Math.min(fr.w / m.origW, fr.h / m.origH);
-      const w = m.origW * scale, h = m.origH * scale;
-      if (w > fr.w + 0.5 || h > fr.h + 0.5) continue;
-      const score = Math.min(fr.w - w, fr.h - h); // best short-side fit
-      if (score < bestScore) { bestScore = score; bestIdx = i; bestRect = { x: fr.x, y: fr.y, w, h }; }
-    }
-    if (!bestRect) continue;
-
-    placed.push({ id: m.id, ...bestRect });
-
-    // Guillotine split of the chosen free rect
-    const fr = freeRects[bestIdx];
-    const rightX = bestRect.x + bestRect.w + pad;
-    const belowY = bestRect.y + bestRect.h + pad;
-    const next = [];
-    if (rightX < fr.x + fr.w) next.push({ x: rightX, y: fr.y, w: fr.x + fr.w - rightX, h: fr.h });
-    if (belowY < fr.y + fr.h) next.push({ x: fr.x, y: belowY, w: Math.max(0, rightX - fr.x), h: fr.y + fr.h - belowY });
-    freeRects.splice(bestIdx, 1, ...next);
-    freeRects = pruneFreeRects(freeRects);
+  let best = tryPackUniform(order, hi * 1e-3, cw, ch, pad) || []; // a tiny scale always fits
+  let lo = 0;
+  for (let i = 0; i < 26; i++) {
+    const mid = (lo + hi) / 2;
+    const packed = tryPackUniform(order, mid, cw, ch, pad);
+    if (packed) { best = packed; lo = mid; } else hi = mid;
   }
-
-  // Anything that could not be packed: stack full-width below
-  const packedIds = new Set(placed.map(p => p.id));
-  let y = placed.reduce((m, p) => Math.max(m, p.y + p.h), 0);
-  if (placed.length) y += pad;
-  else y = pad;
-  for (const m of images) {
-    if (packedIds.has(m.id) || m.origW <= 0 || m.origH <= 0) continue;
-    const h = (availW / m.origW) * m.origH;
-    placed.push({ id: m.id, x: pad, y, w: availW, h });
-    y += h + pad;
-  }
-  return placed;
+  return best;
 }
 
+/* Place every image at natural size × S using MaxRects (best short-side fit,
+   maximal free-rectangle splitting with a pad gutter). Returns the placements,
+   or null if any image can't fit — the caller shrinks S and retries. */
+function tryPackUniform(order, S, cw, ch, pad) {
+  const usableW = cw - pad * 2, usableH = ch - pad * 2;
+  let free = [{ x: pad, y: pad, w: usableW, h: usableH }];
+  const out = [];
+  for (const m of order) {
+    const w = m.origW * S, h = m.origH * S;
+    if (w > usableW + 1e-6 || h > usableH + 1e-6) return null;
+
+    let best = null, bestScore = Infinity;
+    for (const fr of free) {
+      if (fr.w + 1e-6 >= w && fr.h + 1e-6 >= h) {
+        const score = Math.min(fr.w - w, fr.h - h); // best short-side fit
+        if (score < bestScore) { bestScore = score; best = fr; }
+      }
+    }
+    if (!best) return null;
+    out.push({ id: m.id, x: best.x, y: best.y, w, h });
+
+    // Reserve a gutter, then split every free rect the placement overlaps
+    const used = { x: best.x, y: best.y, w: w + pad, h: h + pad };
+    const next = [];
+    for (const fr of free) {
+      if (used.x >= fr.x + fr.w || used.x + used.w <= fr.x ||
+          used.y >= fr.y + fr.h || used.y + used.h <= fr.y) { next.push(fr); continue; }
+      if (used.x > fr.x)                 next.push({ x: fr.x, y: fr.y, w: used.x - fr.x, h: fr.h });
+      if (used.x + used.w < fr.x + fr.w) next.push({ x: used.x + used.w, y: fr.y, w: fr.x + fr.w - used.x - used.w, h: fr.h });
+      if (used.y > fr.y)                 next.push({ x: fr.x, y: fr.y, w: fr.w, h: used.y - fr.y });
+      if (used.y + used.h < fr.y + fr.h) next.push({ x: fr.x, y: used.y + used.h, w: fr.w, h: fr.y + fr.h - used.y - used.h });
+    }
+    free = pruneFreeRects(next);
+  }
+  return out;
+}
+
+/* Drop degenerate free rects and any rect fully contained in another */
 function pruneFreeRects(rects) {
-  return rects.filter((r, i) =>
-    r.w > 1 && r.h > 1 &&
-    !rects.some((o, j) =>
-      i !== j &&
-      o.x <= r.x && o.y <= r.y &&
-      o.x + o.w >= r.x + r.w && o.y + o.h >= r.y + r.h &&
-      (o.w > r.w || o.h > r.h))
-  );
+  const keep = rects.filter(r => r.w > 1 && r.h > 1);
+  return keep.filter((r, i) => !keep.some((o, j) =>
+    i !== j &&
+    o.x <= r.x + 1e-6 && o.y <= r.y + 1e-6 &&
+    o.x + o.w + 1e-6 >= r.x + r.w && o.y + o.h + 1e-6 >= r.y + r.h &&
+    (o.w > r.w || o.h > r.h || j < i))); // equal rects: keep the earlier index
 }
 
 /* Auto — try each algorithm, scale to fit one page height, keep the
    layout with the best area utilization */
-function layoutAuto() {
+function layoutAuto(images = state.images) {
   let best = null, bestUtil = -1;
   for (const mode of ["vertical", "shelf", "maxrects"]) {
-    const raw = runLayout(mode);
+    // Non-paginated: Auto scales everything onto a single page, so page-break
+    // gaps would only distort the fit search.
+    const raw = runLayout(mode, images, state.canvasW, state.canvasH, state.padding, false);
     if (raw.length === 0) continue;
 
     // Binary-search the largest uniform scale that keeps everything on one page
@@ -795,6 +1046,53 @@ function layoutAuto() {
     if (util > bestUtil) { bestUtil = util; best = scaled; }
   }
   return best || [];
+}
+
+/* Force exactly N pages: split the images into N contiguous, area-balanced groups
+   (order preserved), lay each group out with the chosen algorithm, and scale it to
+   fit its own sheet. Fewer images per page ⇒ each image comes out larger. */
+function layoutForcedPages(inputs, N) {
+  const valid = inputs.filter(m => m.origW > 0 && m.origH > 0);
+  if (!valid.length) return [];
+  N = Math.max(1, Math.min(N, valid.length));
+  const groups = partitionByArea(valid, N);
+  const cw = state.canvasW, ch = state.canvasH, pad = state.padding;
+  const placed = [];
+  groups.forEach((group, p) => {
+    if (!group.length) return;
+    const raw = state.layout === "auto"
+      ? layoutAuto(group)
+      : runLayout(state.layout, group, cw, ch, pad, false);
+    if (!raw.length) return;
+    // Scale the whole page's group down (never up past 1×) so it fits the sheet
+    const maxX = raw.reduce((m, q) => Math.max(m, q.x + q.w), 0) + pad;
+    const maxY = raw.reduce((m, q) => Math.max(m, q.y + q.h), 0) + pad;
+    const s = Math.min(1, maxX > 0 ? cw / maxX : 1, maxY > 0 ? ch / maxY : 1);
+    for (const q of raw) {
+      placed.push({ id: q.id, x: q.x * s, y: q.y * s + p * ch, w: q.w * s, h: q.h * s });
+    }
+  });
+  return placed;
+}
+
+/* Split items into N contiguous groups with roughly equal total area, preserving
+   order and guaranteeing every group gets at least one item. */
+function partitionByArea(items, N) {
+  const area = m => m.origW * m.origH;
+  const total = items.reduce((s, m) => s + area(m), 0);
+  const per = total / N;
+  const groups = [];
+  let cur = [], curSum = 0;
+  for (let i = 0; i < items.length; i++) {
+    cur.push(items[i]);
+    curSum += area(items[i]);
+    const left = items.length - i - 1;
+    if (groups.length < N - 1 && curSum >= per && left >= (N - 1 - groups.length)) {
+      groups.push(cur); cur = []; curSum = 0;
+    }
+  }
+  groups.push(cur);
+  return groups;
 }
 
 /* ============================================================
@@ -814,7 +1112,7 @@ function paginate(placed) {
     state.pages.push(
       placed
         .filter(p => Math.floor(p.y / ch) === pg)
-        .map(p => ({ id: p.id, x: p.x, y: p.y - pg * ch, w: p.w, h: p.h }))
+        .map(p => ({ id: p.id, x: p.x, y: p.y - pg * ch, w: p.w, h: p.h, angle: p.angle || 0 }))
     );
   }
   state.totalPages = state.pages.length;
@@ -833,6 +1131,17 @@ function updateExportButtons() {
   $("btnExportAll").disabled = !has;
 }
 
+/* Material yield — image area on the current page / sheet area */
+function updateYield() {
+  const items = state.pages[state.currentPage] || [];
+  const used = items.reduce((s, p) => s + p.w * p.h, 0);
+  const total = state.canvasW * state.canvasH || 1;
+  const pct = Math.min(100, Math.round((used / total) * 100));
+  const has = state.images.length > 0;
+  $("yieldPct").textContent = has ? pct + "%" : "—";
+  $("yieldBar").style.width = (has ? pct : 0) + "%";
+}
+
 /* ============================================================
    RENDER
    ============================================================ */
@@ -847,33 +1156,77 @@ function renderCanvas() {
   const items = state.pages[state.currentPage] || [];
   for (const item of items) {
     const src = state.images.find(m => m.id === item.id);
-    if (!src) continue;
-    ctx.drawImage(src.img, item.x, item.y, item.w, item.h);
+    if (!src || !src.img) continue;
+    drawImageInto(ctx, src, item);
     if (item.id === state.selectedId) drawSelection(item);
   }
 
-  $("emptyState").style.display = state.images.length === 0 ? "flex" : "none";
-  canvas.style.visibility = state.images.length === 0 ? "hidden" : "visible";
+  const has = state.images.length > 0;
+  $("emptyState").style.display = has ? "none" : "flex";
+  canvas.style.visibility = has ? "visible" : "hidden";
+  $("proofMarks").style.display = has ? "block" : "none";
+  updateYield();
+}
+
+/* Draw an image into its placement box, rotated freely around the box center.
+   (x,y,w,h) is the un-rotated footprint; angle is a pure visual transform. */
+function drawImageInto(c, src, item) {
+  const { x, y, w, h, angle } = item;
+  if (!angle) { c.drawImage(src.img, x, y, w, h); return; }
+  c.save();
+  c.translate(x + w / 2, y + h / 2);
+  c.rotate(angle * Math.PI / 180);
+  c.drawImage(src.img, -w / 2, -h / 2, w, h);
+  c.restore();
 }
 
 function drawSelection(item) {
   const z = state.zoom;
-  // Safelight outline
-  ctx.save();
-  ctx.strokeStyle = "#ff6b35";
-  ctx.lineWidth = 2 / z;
-  ctx.strokeRect(item.x, item.y, item.w, item.h);
-  ctx.restore();
+  const cx = item.x + item.w / 2, cy = item.y + item.h / 2;
+  const hw = item.w / 2, hh = item.h / 2;
 
-  // Handles encode behavior: square corners lock aspect, bars stretch one axis
-  for (const h of handlePositions(item)) {
-    drawHandle(h.name, h.x, h.y, z);
-  }
+  // Everything is drawn in the item's rotated local frame (origin at its center)
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate((item.angle || 0) * Math.PI / 180);
+
+  // Registration-cyan outline
+  ctx.strokeStyle = SEL;
+  ctx.lineWidth = 2 / z;
+  ctx.strokeRect(-hw, -hh, item.w, item.h);
+
+  // Rotation knob — a stem rising from the top edge with a round grip
+  const gap = ROT_GAP / z;
+  ctx.beginPath();
+  ctx.moveTo(0, -hh);
+  ctx.lineTo(0, -hh - gap);
+  ctx.stroke();
+  ctx.fillStyle = SEL;
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 1.5 / z;
+  ctx.beginPath();
+  ctx.arc(0, -hh - gap, 6.5 / z, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Resize handles: square corners lock aspect, bars stretch one axis
+  for (const h of localHandleOffsets(item)) drawHandle(h.name, h.x, h.y, z);
+  ctx.restore();
+}
+
+/* Resize-handle positions relative to the item center (rotated local frame) */
+function localHandleOffsets(item) {
+  const hw = item.w / 2, hh = item.h / 2;
+  return [
+    { name: "nw", x: -hw, y: -hh }, { name: "n", x: 0, y: -hh }, { name: "ne", x: hw, y: -hh },
+    { name: "e", x: hw, y: 0 },     { name: "se", x: hw, y: hh }, { name: "s", x: 0, y: hh },
+    { name: "sw", x: -hw, y: hh },  { name: "w", x: -hw, y: 0 },
+  ];
 }
 
 function drawHandle(name, x, y, z) {
   ctx.save();
-  ctx.fillStyle = "#ff6b35";
+  ctx.fillStyle = SEL;
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 1.5 / z;
   const corner = CORNERS.has(name);
@@ -919,7 +1272,7 @@ const CURSORS = {
 };
 
 /* ============================================================
-   CANVAS INTERACTION — select, move, resize (pointer events)
+   CANVAS INTERACTION — select, move, resize, rotate (pointer events)
    ============================================================ */
 function toCanvasCoords(e) {
   const rect = canvas.getBoundingClientRect();
@@ -931,12 +1284,25 @@ function toCanvasCoords(e) {
 
 function currentItems() { return state.pages[state.currentPage] || []; }
 
+/* Map a world point into an item's un-rotated frame, so all hit-tests can stay
+   axis-aligned regardless of the item's rotation. */
+function toLocal(item, px, py) {
+  const a = -(item.angle || 0) * Math.PI / 180;
+  const cx = item.x + item.w / 2, cy = item.y + item.h / 2;
+  const dx = px - cx, dy = py - cy;
+  return { x: cx + dx * Math.cos(a) - dy * Math.sin(a), y: cy + dx * Math.sin(a) + dy * Math.cos(a) };
+}
+
 function hitHandle(mx, my) {
   const sel = currentItems().find(p => p.id === state.selectedId);
   if (!sel) return null;
   const threshold = 15 / state.zoom;
+  const l = toLocal(sel, mx, my);
+  // Rotation knob sits above the top-edge midpoint in the un-rotated frame
+  const rotX = sel.x + sel.w / 2, rotY = sel.y - ROT_GAP / state.zoom;
+  if (Math.abs(l.x - rotX) < threshold && Math.abs(l.y - rotY) < threshold) return "rotate";
   for (const h of handlePositions(sel)) {
-    if (Math.abs(mx - h.x) < threshold && Math.abs(my - h.y) < threshold) return h.name;
+    if (Math.abs(l.x - h.x) < threshold && Math.abs(l.y - h.y) < threshold) return h.name;
   }
   return null;
 }
@@ -945,7 +1311,8 @@ function hitImage(mx, my) {
   const items = currentItems();
   for (let i = items.length - 1; i >= 0; i--) {
     const p = items[i];
-    if (mx >= p.x && mx <= p.x + p.w && my >= p.y && my <= p.y + p.h) return p;
+    const l = toLocal(p, mx, my);
+    if (l.x >= p.x && l.x <= p.x + p.w && l.y >= p.y && l.y <= p.y + p.h) return p;
   }
   return null;
 }
@@ -954,6 +1321,16 @@ canvas.addEventListener("pointerdown", e => {
   const { mx, my } = toCanvasCoords(e);
 
   const handle = hitHandle(mx, my);
+  if (handle === "rotate") {
+    const sel = currentItems().find(p => p.id === state.selectedId);
+    const cx = sel.x + sel.w / 2, cy = sel.y + sel.h / 2;
+    state.drag = {
+      mode: "rotate", center: { x: cx, y: cy },
+      startPointer: Math.atan2(my - cy, mx - cx), originAngle: sel.angle || 0,
+    };
+    canvas.setPointerCapture(e.pointerId);
+    return;
+  }
   if (handle) {
     const sel = currentItems().find(p => p.id === state.selectedId);
     state.drag = { mode: "resize", handle, startX: mx, startY: my, origin: { ...sel } };
@@ -982,6 +1359,7 @@ canvas.addEventListener("pointermove", e => {
     const item = currentItems().find(p => p.id === state.selectedId);
     if (!item) return;
     if (state.drag.mode === "move") moveItem(item, mx, my);
+    else if (state.drag.mode === "rotate") rotateItem(item, mx, my, e.shiftKey);
     else resizeItem(item, mx, my);
     renderCanvas();
     return;
@@ -989,14 +1367,17 @@ canvas.addEventListener("pointermove", e => {
 
   // Idle cursor feedback
   const handle = hitHandle(mx, my);
-  if (handle) canvas.style.cursor = CURSORS[handle] || "default";
+  if (handle === "rotate") canvas.style.cursor = "grab";
+  else if (handle) canvas.style.cursor = CURSORS[handle] || "default";
   else canvas.style.cursor = hitImage(mx, my) ? "move" : "default";
 });
 
 function endDrag(e) {
   if (!state.drag) return;
+  const wasRotate = state.drag.mode === "rotate";
   state.drag = null;
   if (e && canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+  if (wasRotate) renderList(); // refresh the ↻° readout in the sidebar
 }
 canvas.addEventListener("pointerup", endDrag);
 canvas.addEventListener("pointercancel", endDrag);
@@ -1007,43 +1388,81 @@ function moveItem(item, mx, my) {
   item.y = origin.y + (my - startY);
 }
 
-function resizeItem(item, mx, my) {
-  const { handle, startX, startY, origin } = state.drag;
-  const dx = mx - startX, dy = my - startY;
-  const src = state.images.find(m => m.id === item.id);
-  const aspect = src && src.origH > 0 ? src.origW / src.origH : origin.w / origin.h;
-
-  if (CORNERS.has(handle)) {
-    // Aspect-locked from the anchored (opposite) corner
-    const anchorX = handle === "nw" || handle === "sw" ? origin.x + origin.w : origin.x;
-    const anchorY = handle === "nw" || handle === "ne" ? origin.y + origin.h : origin.y;
-    const dirX = handle === "ne" || handle === "se" ? 1 : -1;
-    let newW = Math.max(MIN_SIZE, origin.w + dirX * dx);
-    let newH = newW / aspect;
-    item.w = newW;
-    item.h = newH;
-    item.x = handle === "nw" || handle === "sw" ? anchorX - newW : anchorX;
-    item.y = handle === "nw" || handle === "ne" ? anchorY - newH : anchorY;
-  } else if (handle === "e") {
-    item.w = Math.max(MIN_SIZE, origin.w + dx);
-  } else if (handle === "w") {
-    item.w = Math.max(MIN_SIZE, origin.w - dx);
-    item.x = origin.x + origin.w - item.w;
-  } else if (handle === "s") {
-    item.h = Math.max(MIN_SIZE, origin.h + dy);
-  } else if (handle === "n") {
-    item.h = Math.max(MIN_SIZE, origin.h - dy);
-    item.y = origin.y + origin.h - item.h;
+/* Free rotation from the knob — angle of the pointer around the item center.
+   Hold Shift to snap to a 15° grid; otherwise magnetically align to the nearest
+   cardinal (0/90/180/270) when the angle lands within CARDINAL_SNAP degrees. */
+function rotateItem(item, mx, my, snap) {
+  const { center, startPointer, originAngle } = state.drag;
+  const cur = Math.atan2(my - center.y, mx - center.x);
+  let deg = normAngle(originAngle + (cur - startPointer) * 180 / Math.PI);
+  if (snap) {
+    deg = normAngle(Math.round(deg / 15) * 15);
+  } else {
+    const cardinal = Math.round(deg / 90) * 90;
+    if (Math.abs(deg - cardinal) <= CARDINAL_SNAP) deg = normAngle(cardinal);
   }
+  item.angle = deg;
+  const src = state.images.find(m => m.id === item.id);
+  if (src) src.angle = deg; // persist so a later re-arrange keeps the rotation
 }
 
-/* Keyboard: remove selected, deselect */
+/* Resize a (possibly rotated) box: the opposite corner/edge stays fixed in world
+   space while the dragged handle follows the pointer. All math is done in the
+   item's local frame, then mapped back to the un-rotated footprint (x,y,w,h). */
+function resizeItem(item, mx, my) {
+  const { handle, origin } = state.drag;
+  const src = state.images.find(m => m.id === item.id);
+  const aspect = src && src.origH > 0 ? src.origW / src.origH : origin.w / origin.h;
+  const a = (origin.angle || 0) * Math.PI / 180;
+  const ca = Math.cos(a), sa = Math.sin(a);
+  const rot = (x, y) => ({ x: x * ca - y * sa, y: x * sa + y * ca });   // local → world
+  const inv = (x, y) => ({ x: x * ca + y * sa, y: -x * sa + y * ca });  // world → local
+
+  const C0 = { x: origin.x + origin.w / 2, y: origin.y + origin.h / 2 };
+  const sx = handle.includes("e") ? 1 : handle.includes("w") ? -1 : 0;
+  const sy = handle.includes("s") ? 1 : handle.includes("n") ? -1 : 0;
+  // Anchor = the opposite corner/edge midpoint, fixed in world space
+  const Or = rot(-sx * origin.w / 2, -sy * origin.h / 2);
+  const O = { x: C0.x + Or.x, y: C0.y + Or.y };
+  const Vl = inv(mx - O.x, my - O.y); // pointer relative to anchor, in local axes
+
+  let newW, newH, dirX, dirY;
+  if (CORNERS.has(handle)) {
+    newW = Math.max(MIN_SIZE, Math.abs(Vl.x), Math.abs(Vl.y) * aspect);
+    newH = newW / aspect;
+    dirX = Math.sign(Vl.x) || sx;
+    dirY = Math.sign(Vl.y) || sy;
+  } else if (sx !== 0) { // e / w — stretch width only
+    newW = Math.max(MIN_SIZE, Math.abs(Vl.x));
+    newH = origin.h;
+    dirX = Math.sign(Vl.x) || sx;
+    dirY = 0;
+  } else {               // n / s — stretch height only
+    newH = Math.max(MIN_SIZE, Math.abs(Vl.y));
+    newW = origin.w;
+    dirX = 0;
+    dirY = Math.sign(Vl.y) || sy;
+  }
+
+  const cl = rot(dirX * newW / 2, dirY * newH / 2); // new center offset from anchor
+  const C1 = { x: O.x + cl.x, y: O.y + cl.y };
+  item.w = newW;
+  item.h = newH;
+  item.angle = origin.angle || 0;
+  item.x = C1.x - newW / 2;
+  item.y = C1.y - newH / 2;
+}
+
+/* Keyboard: rotate, remove selected, deselect */
 document.addEventListener("keydown", e => {
   if (state.selectedId === null) return;
   if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
   if (e.key === "Delete" || e.key === "Backspace") {
     e.preventDefault();
     removeImage(state.selectedId);
+  } else if (e.key === "r" || e.key === "R") {
+    e.preventDefault();
+    rotateImage(state.selectedId);
   } else if (e.key === "Escape") {
     state.selectedId = null;
     renderList();
@@ -1056,7 +1475,8 @@ document.addEventListener("keydown", e => {
    ============================================================ */
 $("btnExport").addEventListener("click", () => exportPage(state.currentPage));
 $("btnExportAll").addEventListener("click", () => {
-  for (let p = 0; p < state.totalPages; p++) exportPage(p);
+  // Stagger downloads — firing many synchronous saves makes browsers block all but the first
+  for (let p = 0; p < state.totalPages; p++) setTimeout(() => exportPage(p), p * 300);
 });
 
 function exportPage(pg) {
@@ -1070,7 +1490,7 @@ function exportPage(pg) {
 
   for (const item of items) {
     const src = state.images.find(m => m.id === item.id);
-    if (src) octx.drawImage(src.img, item.x, item.y, item.w, item.h);
+    if (src && src.img) drawImageInto(octx, src, item);
   }
 
   out.toBlob(blob => {

@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拼版台 · 图片拼接工具</title>
+<style>
+/* ============================================================
+   DARKROOM — a contact-sheet imposition table.
+   Warm near-black workspace, safelight amber accent, the print
+   (canvas) sits on a light table as the hero.
+   ============================================================ */
+:root{
+  /* Workspace surfaces — warm charcoals, never neutral gray */
+  --bg:          #100d0b;
+  --bg-panel:    #191512;
+  --bg-elev:     #221c17;
+  --bg-input:    #14100d;
+  --line:        #2c241e;
+  --line-strong: #3d3129;
+
+  /* Ink — warm off-white to muted clay */
+  --ink:       #ece2d6;
+  --ink-dim:   #9d8f80;
+  --ink-faint: #6a5c4f;
+
+  /* Safelight — the one saturated color in the room */
+  --safe:       #ff6b35;
+  --safe-hot:   #ff8355;
+  --safe-soft:  rgba(255,107,53,.12);
+  --safe-line:  rgba(255,107,53,.45);
+  --safe-glow:  rgba(255,107,53,.30);
+
+  --paper:  #ffffff;
+  --danger: #ff5b5b;
+
+  --mono: ui-monospace,'SF Mono','JetBrains Mono','Cascadia Code',Menlo,Consolas,monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+
+  --r-sm: 5px; --r-md: 8px; --r-lg: 13px;
+  --ease: cubic-bezier(.2,.8,.2,1);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  font-family:var(--sans);
+  background:var(--bg);
+  color:var(--ink);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--safe-glow);color:#fff}
+
+/* Custom scrollbars — thin, warm */
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:6px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:#4d4036;background-clip:content-box}
+
+.app{display:flex;height:100vh}
+
+/* ---------- SIDEBAR ---------- */
+.sidebar{
+  width:288px;flex-shrink:0;
+  background:var(--bg-panel);
+  border-right:1px solid var(--line);
+  display:flex;flex-direction:column;
+}
+.brand{
+  display:flex;align-items:center;gap:11px;
+  padding:16px 18px;
+  border-bottom:1px solid var(--line);
+}
+.safelight-lamp{
+  width:11px;height:11px;border-radius:50%;
+  background:var(--safe);flex-shrink:0;
+  box-shadow:0 0 0 3px var(--safe-soft),0 0 14px 2px var(--safe-glow);
+  animation:pulse 3.2s var(--ease) infinite;
+}
+@keyframes pulse{
+  0%,100%{box-shadow:0 0 0 3px var(--safe-soft),0 0 10px 1px var(--safe-glow)}
+  50%    {box-shadow:0 0 0 4px var(--safe-soft),0 0 20px 4px var(--safe-glow)}
+}
+.brand .titles{line-height:1.25}
+.brand h1{font-size:14px;font-weight:650;letter-spacing:.2px;color:var(--ink)}
+.brand .sub{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:2px;margin-top:2px}
+
+/* ---------- UPLOAD ZONE ---------- */
+.upload{
+  margin:14px;padding:26px 16px;
+  border:1.5px dashed var(--line-strong);
+  border-radius:var(--r-lg);
+  text-align:center;cursor:pointer;
+  background:
+    radial-gradient(120% 120% at 50% -10%, var(--safe-soft), transparent 60%),
+    var(--bg-input);
+  transition:border-color .2s var(--ease),transform .18s var(--ease),box-shadow .2s var(--ease);
+}
+.upload:hover{border-color:var(--safe-line);transform:translateY(-1px)}
+.upload.dragover{
+  border-color:var(--safe);border-style:solid;
+  box-shadow:0 0 0 3px var(--safe-soft),0 0 26px var(--safe-glow) inset;
+  transform:scale(1.01);
+}
+.upload .glyph{
+  font-size:26px;line-height:1;color:var(--safe);
+  transition:transform .2s var(--ease);display:inline-block;
+}
+.upload:hover .glyph{transform:translateY(-2px)}
+.upload .lead{margin-top:10px;font-size:13px;color:var(--ink);font-weight:550}
+.upload .hint{margin-top:4px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.5px}
+
+/* ---------- CONTACT SHEET (image list) ---------- */
+.sheet-head{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:6px 18px 8px;
+}
+.sheet-head .label{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;color:var(--ink-faint)}
+.sheet-head .count{font-family:var(--mono);font-size:11px;color:var(--safe)}
+.list{flex:1;overflow-y:auto;padding:2px 10px 10px}
+.frame{
+  display:flex;align-items:center;gap:10px;
+  padding:7px 8px;border-radius:var(--r-md);
+  cursor:grab;position:relative;
+  border:1px solid transparent;
+  transition:background .15s var(--ease),border-color .15s var(--ease);
+}
+.frame:hover{background:var(--bg-elev);border-color:var(--line)}
+.frame.selected{background:var(--safe-soft);border-color:var(--safe-line)}
+.frame.dragging{opacity:.35}
+.frame.drop-before{box-shadow:0 -2px 0 var(--safe)}
+.frame .no{
+  font-family:var(--mono);font-size:10px;color:var(--ink-faint);
+  width:20px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;
+}
+.frame.selected .no{color:var(--safe)}
+.frame .thumb{
+  width:42px;height:42px;object-fit:cover;border-radius:4px;
+  background:var(--bg-input);flex-shrink:0;
+  box-shadow:0 0 0 1px var(--line);
+}
+.frame .meta{flex:1;min-width:0}
+.frame .name{font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frame .dims{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:2px}
+.frame .kill{
+  border:none;background:none;cursor:pointer;flex-shrink:0;
+  color:var(--ink-faint);font-size:15px;line-height:1;
+  width:24px;height:24px;border-radius:5px;
+  display:flex;align-items:center;justify-content:center;
+  transition:color .15s,background .15s;
+}
+.frame .kill:hover{color:var(--danger);background:rgba(255,91,91,.12)}
+
+.sidebar-foot{padding:12px;border-top:1px solid var(--line)}
+.btn-arrange{
+  width:100%;padding:11px;border-radius:var(--r-md);cursor:pointer;
+  font-family:var(--sans);font-size:13px;font-weight:600;
+  color:var(--ink);background:var(--bg-elev);
+  border:1px solid var(--line-strong);
+  transition:all .16s var(--ease);
+  display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.btn-arrange:hover{border-color:var(--safe-line);background:#2a221c;color:#fff}
+.btn-arrange:active{transform:translateY(1px)}
+.btn-arrange:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* ---------- MAIN + TOOLBAR ---------- */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.toolbar{
+  min-height:56px;display:flex;align-items:center;flex-wrap:wrap;
+  gap:12px;padding:0 16px;
+  background:var(--bg-panel);border-bottom:1px solid var(--line);
+}
+.field{display:flex;align-items:center;gap:7px}
+.field > .lbl{font-size:12px;color:var(--ink-dim);white-space:nowrap}
+.toolbar select,.toolbar input[type=number]{
+  font-family:var(--mono);font-size:12px;color:var(--ink);
+  background:var(--bg-input);border:1px solid var(--line-strong);
+  padding:6px 9px;border-radius:var(--r-sm);
+  transition:border-color .15s,box-shadow .15s;
+}
+.toolbar select{cursor:pointer;padding-right:8px}
+.toolbar input[type=number]{width:66px;text-align:right}
+.toolbar select:focus,.toolbar input:focus{
+  outline:none;border-color:var(--safe);box-shadow:0 0 0 3px var(--safe-soft);
+}
+.divider{width:1px;height:26px;background:var(--line)}
+.spacer{flex:1}
+
+.pager{display:flex;align-items:center;gap:8px}
+.pager button{
+  width:28px;height:28px;border-radius:var(--r-sm);cursor:pointer;
+  background:var(--bg-input);border:1px solid var(--line-strong);
+  color:var(--ink);font-size:12px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s var(--ease);
+}
+.pager button:hover:not(:disabled){border-color:var(--safe-line);color:#fff}
+.pager button:disabled{opacity:.35;cursor:default}
+.pager .readout{font-family:var(--mono);font-size:12px;color:var(--ink-dim);min-width:52px;text-align:center;font-variant-numeric:tabular-nums}
+
+.btn{
+  padding:8px 15px;border-radius:var(--r-md);cursor:pointer;border:1px solid transparent;
+  font-family:var(--sans);font-size:12.5px;font-weight:600;
+  display:inline-flex;align-items:center;gap:6px;
+  transition:all .16s var(--ease);
+}
+.btn:active{transform:translateY(1px)}
+.btn-ghost{background:var(--bg-elev);border-color:var(--line-strong);color:var(--ink)}
+.btn-ghost:hover{border-color:var(--safe-line);background:#2a221c}
+.btn-primary{background:var(--safe);color:#160b05;box-shadow:0 2px 14px var(--safe-glow)}
+.btn-primary:hover{background:var(--safe-hot);box-shadow:0 3px 20px var(--safe-glow)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* ---------- WORKSPACE (canvas hero) ---------- */
+.workspace{
+  flex:1;overflow:auto;position:relative;
+  display:flex;align-items:center;justify-content:center;padding:48px;
+  background:
+    radial-gradient(80% 60% at 50% 40%, rgba(255,107,53,.045), transparent 70%),
+    radial-gradient(circle at center, var(--bg) 0%, #0a0806 100%);
+  background-attachment:local;
+}
+/* faint light-table grid */
+.workspace::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(var(--line) 1px,transparent 1px),
+    linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:44px 44px;opacity:.14;
+}
+canvas{
+  display:block;position:relative;z-index:1;
+  background:var(--paper);
+  box-shadow:0 0 0 1px rgba(255,255,255,.06),0 24px 60px rgba(0,0,0,.6),0 4px 16px rgba(0,0,0,.5);
+  transition:width .16s var(--ease),height .16s var(--ease);
+}
+
+/* Empty state — direction, not a blank box */
+.empty{
+  position:absolute;inset:0;z-index:2;pointer-events:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  text-align:center;
+}
+.empty .mark{
+  font-size:52px;color:var(--line-strong);
+  filter:drop-shadow(0 0 20px rgba(255,107,53,.15));
+}
+.empty h2{font-size:16px;color:var(--ink-dim);font-weight:600}
+.empty p{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.5px}
+
+/* Zoom cluster */
+.zoom{
+  position:absolute;bottom:20px;right:20px;z-index:6;
+  display:flex;align-items:center;gap:6px;
+  background:rgba(20,16,13,.85);backdrop-filter:blur(8px);
+  border:1px solid var(--line-strong);border-radius:10px;padding:5px;
+}
+.zoom button{
+  width:30px;height:30px;border-radius:6px;cursor:pointer;
+  background:transparent;border:none;color:var(--ink);font-size:15px;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s;
+}
+.zoom button:hover{background:var(--bg-elev);color:var(--safe)}
+.zoom .pct{
+  font-family:var(--mono);font-size:11px;color:var(--ink-dim);
+  min-width:44px;text-align:center;font-variant-numeric:tabular-nums;
+}
+
+/* Toast */
+.toast-wrap{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:50;display:flex;flex-direction:column;gap:8px;align-items:center}
+.toast{
+  font-family:var(--mono);font-size:12px;
+  background:var(--bg-elev);border:1px solid var(--danger);
+  color:var(--ink);padding:9px 16px;border-radius:8px;
+  box-shadow:0 8px 30px rgba(0,0,0,.5);
+  animation:toast-in .25s var(--ease);
+}
+@keyframes toast-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="safelight-lamp"></div>
+      <div class="titles">
+        <h1>图片拼版台</h1>
+        <div class="sub">CONTACT&nbsp;SHEET</div>
+      </div>
+    </div>
+
+    <div class="upload" id="uploadZone">
+      <div class="glyph">◈</div>
+      <div class="lead">点击选择，或把图片拖进来</div>
+      <div class="hint">PNG · JPG · WEBP · 支持多选</div>
+      <input type="file" id="fileInput" multiple accept="image/*" hidden>
+    </div>
+
+    <div class="sheet-head">
+      <span class="label">FRAMES</span>
+      <span class="count" id="frameCount">0</span>
+    </div>
+    <div class="list" id="list"></div>
+
+    <div class="sidebar-foot">
+      <button class="btn-arrange" id="btnArrange" disabled>✦ 重新排版</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="toolbar">
+      <div class="field">
+        <span class="lbl">纸张</span>
+        <select id="presetSelect">
+          <option value="a4">A4 · 2480×3508</option>
+          <option value="letter">Letter · 2550×3300</option>
+          <option value="custom">自定义</option>
+        </select>
+        <input type="number" id="canvasW" value="2480" min="100" max="20000" hidden>
+        <span id="sizeX" hidden style="color:var(--ink-faint);font-family:var(--mono)">×</span>
+        <input type="number" id="canvasH" value="3508" min="100" max="20000" hidden>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <span class="lbl">排版</span>
+        <select id="layoutSelect">
+          <option value="shelf">行排列 Shelf</option>
+          <option value="vertical">垂直堆叠 Vertical</option>
+          <option value="maxrects">矩形填充 MaxRects</option>
+          <option value="auto">自动最优 Auto</option>
+        </select>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <span class="lbl">间距</span>
+        <input type="number" id="paddingInput" value="10" min="0" max="500" style="width:58px">
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="pager">
+        <button id="btnPrevPage" disabled title="上一页">◀</button>
+        <span class="readout" id="pageInfo">1 / 1</span>
+        <button id="btnNextPage" disabled title="下一页">▶</button>
+      </div>
+
+      <div class="spacer"></div>
+
+      <button class="btn btn-ghost" id="btnExportAll" disabled>导出全部页</button>
+      <button class="btn btn-primary" id="btnExport" disabled>导出当前页</button>
+    </div>
+
+    <div class="workspace" id="workspace">
+      <canvas id="canvas"></canvas>
+      <div class="empty" id="emptyState">
+        <div class="mark">◈</div>
+        <h2>把图片拖进来，开始拼版</h2>
+        <p>选好后会自动排布到纸张上，可拖动与缩放微调</p>
+      </div>
+      <div class="zoom">
+        <button id="btnZoomOut" title="缩小">−</button>
+        <span class="pct" id="zoomInfo">100%</span>
+        <button id="btnZoomIn" title="放大">+</button>
+        <button id="btnZoomFit" title="适应窗口">⤢</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const state = {
+  images: [],            // { id, name, img, origW, origH }
+  canvasW: 2480,
+  canvasH: 3508,
+  layout: "shelf",
+  padding: 10,
+  zoom: 0.25,
+  selectedId: null,
+  currentPage: 0,
+  totalPages: 1,
+  pages: [[]],           // pages[p] = [ { id, x, y, w, h } ] in canvas px, page-relative y
+  drag: null,            // { mode:'move'|'resize', handle, startX, startY, origin }
+  nextId: 1,
+};
+
+const MIN_SIZE = 24;     // smallest allowed placement, in canvas px
+const HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+const CORNERS = new Set(["nw", "ne", "se", "sw"]);
+
+/* ============================================================
+   DOM SHORTCUTS
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const canvas = $("canvas");
+const ctx = canvas.getContext("2d");
+
+/* ============================================================
+   TOASTS — surface failures instead of swallowing them
+   ============================================================ */
+function toast(message) {
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.textContent = message;
+  $("toastWrap").appendChild(el);
+  setTimeout(() => {
+    el.style.transition = "opacity .3s, transform .3s";
+    el.style.opacity = "0";
+    el.style.transform = "translateY(8px)";
+    setTimeout(() => el.remove(), 320);
+  }, 2600);
+}
+
+/* ============================================================
+   FILE INTAKE
+   ============================================================ */
+const uploadZone = $("uploadZone");
+uploadZone.addEventListener("click", () => $("fileInput").click());
+uploadZone.addEventListener("dragover", e => { e.preventDefault(); uploadZone.classList.add("dragover"); });
+uploadZone.addEventListener("dragleave", () => uploadZone.classList.remove("dragover"));
+uploadZone.addEventListener("drop", e => {
+  e.preventDefault();
+  uploadZone.classList.remove("dragover");
+  addFiles(e.dataTransfer.files);
+});
+$("fileInput").addEventListener("change", e => { addFiles(e.target.files); e.target.value = ""; });
+
+function addFiles(fileList) {
+  const files = Array.from(fileList).filter(f => f.type.startsWith("image/"));
+  const rejected = fileList.length - files.length;
+  if (rejected > 0) toast(`已跳过 ${rejected} 个非图片文件`);
+  files.forEach(loadImageFile);
+}
+
+function loadImageFile(file) {
+  const reader = new FileReader();
+  reader.onerror = () => toast(`无法读取「${file.name}」`);
+  reader.onload = ev => {
+    const img = new Image();
+    img.onerror = () => toast(`无法解码「${file.name}」`);
+    img.onload = () => {
+      state.images.push({
+        id: state.nextId++,
+        name: file.name,
+        img,
+        origW: img.naturalWidth,
+        origH: img.naturalHeight,
+      });
+      renderList();
+      arrange();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ============================================================
+   CONTACT SHEET (image list + reordering)
+   ============================================================ */
+function renderList() {
+  const list = $("list");
+  list.innerHTML = "";
+  $("frameCount").textContent = String(state.images.length).padStart(2, "0");
+
+  state.images.forEach((image, index) => {
+    const frame = document.createElement("div");
+    frame.className = "frame" + (image.id === state.selectedId ? " selected" : "");
+    frame.draggable = true;
+    frame.dataset.index = index;
+    frame.innerHTML =
+      `<span class="no">${String(index + 1).padStart(2, "0")}</span>` +
+      `<img class="thumb" src="${image.img.src}" alt="">` +
+      `<div class="meta">` +
+        `<div class="name">${escapeHtml(image.name)}</div>` +
+        `<div class="dims">${image.origW}×${image.origH}</div>` +
+      `</div>` +
+      `<button class="kill" title="移除">✕</button>`;
+
+    frame.querySelector(".kill").addEventListener("click", e => {
+      e.stopPropagation();
+      removeImage(image.id);
+    });
+    frame.addEventListener("click", () => selectImage(image.id));
+
+    // Reorder via drag
+    frame.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("text/plain", String(index));
+      e.dataTransfer.effectAllowed = "move";
+      frame.classList.add("dragging");
+    });
+    frame.addEventListener("dragend", () => frame.classList.remove("dragging"));
+    frame.addEventListener("dragover", e => { e.preventDefault(); frame.classList.add("drop-before"); });
+    frame.addEventListener("dragleave", () => frame.classList.remove("drop-before"));
+    frame.addEventListener("drop", e => {
+      e.preventDefault();
+      frame.classList.remove("drop-before");
+      const from = parseInt(e.dataTransfer.getData("text/plain"), 10);
+      reorderImage(from, index);
+    });
+
+    list.appendChild(frame);
+  });
+
+  const hasImages = state.images.length > 0;
+  $("btnArrange").disabled = !hasImages;
+}
+
+function removeImage(id) {
+  state.images = state.images.filter(m => m.id !== id);
+  if (state.selectedId === id) state.selectedId = null;
+  renderList();
+  arrange();
+}
+
+function reorderImage(from, to) {
+  if (Number.isNaN(from) || from === to) return;
+  const [moved] = state.images.splice(from, 1);
+  state.images.splice(to, 0, moved);
+  renderList();
+  arrange();
+}
+
+function selectImage(id) {
+  state.selectedId = id;
+  const page = findPageOf(id);
+  if (page !== -1) state.currentPage = page;
+  renderList();
+  renderCanvas();
+  updatePager();
+}
+
+function findPageOf(id) {
+  for (let p = 0; p < state.pages.length; p++) {
+    if (state.pages[p].some(it => it.id === id)) return p;
+  }
+  return -1;
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+/* ============================================================
+   TOOLBAR
+   ============================================================ */
+$("presetSelect").addEventListener("change", e => {
+  const preset = e.target.value;
+  const custom = preset === "custom";
+  $("canvasW").hidden = !custom;
+  $("canvasH").hidden = !custom;
+  $("sizeX").hidden = !custom;
+  if (preset === "a4") { setCanvasSize(2480, 3508); }
+  else if (preset === "letter") { setCanvasSize(2550, 3300); }
+  else { setCanvasSize(readInt($("canvasW"), 2480), readInt($("canvasH"), 3508)); }
+});
+$("canvasW").addEventListener("input", () => setCanvasSize(readInt($("canvasW"), 2480), state.canvasH));
+$("canvasH").addEventListener("input", () => setCanvasSize(state.canvasW, readInt($("canvasH"), 3508)));
+$("layoutSelect").addEventListener("change", e => { state.layout = e.target.value; arrange(); });
+$("paddingInput").addEventListener("input", e => { state.padding = clamp(readInt(e.target, 0), 0, 500); arrange(); });
+$("btnArrange").addEventListener("click", arrange);
+$("btnPrevPage").addEventListener("click", () => goToPage(state.currentPage - 1));
+$("btnNextPage").addEventListener("click", () => goToPage(state.currentPage + 1));
+
+function setCanvasSize(w, h) {
+  state.canvasW = clamp(w, 100, 20000);
+  state.canvasH = clamp(h, 100, 20000);
+  arrange();
+}
+
+function goToPage(p) {
+  const target = clamp(p, 0, state.totalPages - 1);
+  if (target === state.currentPage) return;
+  state.currentPage = target;
+  renderCanvas();
+  updatePager();
+}
+
+function readInt(input, fallback) {
+  const v = parseInt(input.value, 10);
+  return Number.isFinite(v) ? v : fallback;
+}
+function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+
+/* ============================================================
+   ZOOM
+   ============================================================ */
+$("btnZoomIn").addEventListener("click", () => setZoom(state.zoom * 1.25));
+$("btnZoomOut").addEventListener("click", () => setZoom(state.zoom / 1.25));
+$("btnZoomFit").addEventListener("click", fitZoom);
+
+$("workspace").addEventListener("wheel", e => {
+  if (!e.ctrlKey && !e.metaKey && !e.altKey) return; // let plain scroll pan the workspace
+  e.preventDefault();
+  setZoom(e.deltaY < 0 ? state.zoom * 1.1 : state.zoom / 1.1);
+}, { passive: false });
+
+function setZoom(z) {
+  state.zoom = clamp(z, 0.03, 4);
+  applyZoom();
+}
+
+function fitZoom() {
+  const area = $("workspace");
+  const pad = 96;
+  const zw = (area.clientWidth - pad) / state.canvasW;
+  const zh = (area.clientHeight - pad) / state.canvasH;
+  state.zoom = clamp(Math.min(zw, zh, 1), 0.03, 4);
+  applyZoom();
+}
+
+function applyZoom() {
+  canvas.style.width = state.canvasW * state.zoom + "px";
+  canvas.style.height = state.canvasH * state.zoom + "px";
+  $("zoomInfo").textContent = Math.round(state.zoom * 100) + "%";
+}
+
+/* ============================================================
+   LAYOUT — each algorithm returns placements in canvas px:
+     [ { id, x, y, w, h } ]   (y may exceed one page height)
+   ============================================================ */
+function arrange() {
+  if (state.images.length === 0) {
+    state.pages = [[]];
+    state.totalPages = 1;
+    state.currentPage = 0;
+    updateExportButtons();
+    renderCanvas();
+    updatePager();
+    return;
+  }
+  const placed = state.layout === "auto" ? layoutAuto() : runLayout(state.layout);
+  paginate(placed);
+  updateExportButtons();
+  renderCanvas();
+  updatePager();
+}
+
+function runLayout(mode, images = state.images, cw = state.canvasW, ch = state.canvasH, pad = state.padding) {
+  const availW = cw - pad * 2;
+  if (availW <= 0) return []; // padding swallows the page — nothing placeable
+  switch (mode) {
+    case "vertical": return layoutVertical(images, cw, pad, availW);
+    case "maxrects": return layoutMaxRects(images, cw, ch, pad);
+    case "shelf":
+    default:         return layoutShelf(images, cw, pad, availW);
+  }
+}
+
+/* Vertical — one image per row, full available width */
+function layoutVertical(images, cw, pad, availW) {
+  const placed = [];
+  let y = pad;
+  for (const m of images) {
+    if (m.origW <= 0 || m.origH <= 0) continue;
+    const h = (availW / m.origW) * m.origH;
+    placed.push({ id: m.id, x: pad, y, w: availW, h });
+    y += h + pad;
+  }
+  return placed;
+}
+
+/* Shelf — greedily fill rows; break a row when adding an image would
+   shrink the row height too aggressively */
+function layoutShelf(images, cw, pad, availW) {
+  const placed = [];
+  let curY = pad;
+  let row = [];
+
+  const rowHeight = items => {
+    const gaps = Math.max(0, items.length - 1) * pad;
+    const sumRatio = items.reduce((s, m) => s + (m.origH > 0 ? m.origW / m.origH : 0), 0);
+    return sumRatio > 0 ? (availW - gaps) / sumRatio : 0;
+  };
+
+  const flush = () => {
+    if (row.length === 0) return;
+    const h = rowHeight(row);
+    if (h > 0) {
+      let x = pad;
+      for (const m of row) {
+        const w = (h / m.origH) * m.origW;
+        placed.push({ id: m.id, x, y: curY, w, h });
+        x += w + pad;
+      }
+      curY += h + pad;
+    }
+    row = [];
+  };
+
+  for (const m of images) {
+    if (m.origW <= 0 || m.origH <= 0) continue;
+    if (row.length > 0) {
+      const before = rowHeight(row);
+      const after = rowHeight([...row, m]);
+      if (before > 0 && after < before * 0.7) flush();
+    }
+    row.push(m);
+  }
+  flush();
+  return placed;
+}
+
+/* MaxRects — rectangle packing (best short-side fit), overflow stacks below */
+function layoutMaxRects(images, cw, ch, pad) {
+  const placed = [];
+  const availW = cw - pad * 2;
+  const sorted = [...images]
+    .filter(m => m.origW > 0 && m.origH > 0)
+    .sort((a, b) => Math.max(b.origW, b.origH) - Math.max(a.origW, a.origH));
+
+  let freeRects = [{ x: pad, y: pad, w: availW, h: ch - pad * 2 }];
+
+  for (const m of sorted) {
+    let bestScore = Infinity, bestRect = null, bestIdx = -1;
+    for (let i = 0; i < freeRects.length; i++) {
+      const fr = freeRects[i];
+      const scale = Math.min(fr.w / m.origW, fr.h / m.origH);
+      const w = m.origW * scale, h = m.origH * scale;
+      if (w > fr.w + 0.5 || h > fr.h + 0.5) continue;
+      const score = Math.min(fr.w - w, fr.h - h); // best short-side fit
+      if (score < bestScore) { bestScore = score; bestIdx = i; bestRect = { x: fr.x, y: fr.y, w, h }; }
+    }
+    if (!bestRect) continue;
+
+    placed.push({ id: m.id, ...bestRect });
+
+    // Guillotine split of the chosen free rect
+    const fr = freeRects[bestIdx];
+    const rightX = bestRect.x + bestRect.w + pad;
+    const belowY = bestRect.y + bestRect.h + pad;
+    const next = [];
+    if (rightX < fr.x + fr.w) next.push({ x: rightX, y: fr.y, w: fr.x + fr.w - rightX, h: fr.h });
+    if (belowY < fr.y + fr.h) next.push({ x: fr.x, y: belowY, w: Math.max(0, rightX - fr.x), h: fr.y + fr.h - belowY });
+    freeRects.splice(bestIdx, 1, ...next);
+    freeRects = pruneFreeRects(freeRects);
+  }
+
+  // Anything that could not be packed: stack full-width below
+  const packedIds = new Set(placed.map(p => p.id));
+  let y = placed.reduce((m, p) => Math.max(m, p.y + p.h), 0);
+  if (placed.length) y += pad;
+  else y = pad;
+  for (const m of images) {
+    if (packedIds.has(m.id) || m.origW <= 0 || m.origH <= 0) continue;
+    const h = (availW / m.origW) * m.origH;
+    placed.push({ id: m.id, x: pad, y, w: availW, h });
+    y += h + pad;
+  }
+  return placed;
+}
+
+function pruneFreeRects(rects) {
+  return rects.filter((r, i) =>
+    r.w > 1 && r.h > 1 &&
+    !rects.some((o, j) =>
+      i !== j &&
+      o.x <= r.x && o.y <= r.y &&
+      o.x + o.w >= r.x + r.w && o.y + o.h >= r.y + r.h &&
+      (o.w > r.w || o.h > r.h))
+  );
+}
+
+/* Auto — try each algorithm, scale to fit one page height, keep the
+   layout with the best area utilization */
+function layoutAuto() {
+  let best = null, bestUtil = -1;
+  for (const mode of ["vertical", "shelf", "maxrects"]) {
+    const raw = runLayout(mode);
+    if (raw.length === 0) continue;
+
+    // Binary-search the largest uniform scale that keeps everything on one page
+    let lo = 0.01, hi = 1;
+    for (let i = 0; i < 24; i++) {
+      const mid = (lo + hi) / 2;
+      const maxY = raw.reduce((m, p) => Math.max(m, p.y * mid + p.h * mid), 0);
+      if (maxY <= state.canvasH) lo = mid; else hi = mid;
+    }
+    const scaled = raw.map(p => ({ id: p.id, x: p.x * lo, y: p.y * lo, w: p.w * lo, h: p.h * lo }));
+    const usedArea = scaled.reduce((s, p) => s + p.w * p.h, 0);
+    const maxY = scaled.reduce((m, p) => Math.max(m, p.y + p.h), 0) || 1;
+    const util = usedArea / (state.canvasW * maxY);
+    if (util > bestUtil) { bestUtil = util; best = scaled; }
+  }
+  return best || [];
+}
+
+/* ============================================================
+   PAGINATION — split placements across pages by Y position
+   ============================================================ */
+function paginate(placed) {
+  const ch = state.canvasH;
+  if (!placed || placed.length === 0) {
+    state.pages = [[]];
+    state.totalPages = 1;
+    state.currentPage = 0;
+    return;
+  }
+  const maxPage = placed.reduce((m, p) => Math.max(m, Math.floor(p.y / ch)), 0);
+  state.pages = [];
+  for (let pg = 0; pg <= maxPage; pg++) {
+    state.pages.push(
+      placed
+        .filter(p => Math.floor(p.y / ch) === pg)
+        .map(p => ({ id: p.id, x: p.x, y: p.y - pg * ch, w: p.w, h: p.h }))
+    );
+  }
+  state.totalPages = state.pages.length;
+  if (state.currentPage >= state.totalPages) state.currentPage = 0;
+}
+
+function updatePager() {
+  $("pageInfo").textContent = `${state.currentPage + 1} / ${state.totalPages}`;
+  $("btnPrevPage").disabled = state.currentPage <= 0;
+  $("btnNextPage").disabled = state.currentPage >= state.totalPages - 1;
+}
+
+function updateExportButtons() {
+  const has = state.images.length > 0;
+  $("btnExport").disabled = !has;
+  $("btnExportAll").disabled = !has;
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function renderCanvas() {
+  canvas.width = state.canvasW;
+  canvas.height = state.canvasH;
+  applyZoom();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, state.canvasW, state.canvasH);
+
+  const items = state.pages[state.currentPage] || [];
+  for (const item of items) {
+    const src = state.images.find(m => m.id === item.id);
+    if (!src) continue;
+    ctx.drawImage(src.img, item.x, item.y, item.w, item.h);
+    if (item.id === state.selectedId) drawSelection(item);
+  }
+
+  $("emptyState").style.display = state.images.length === 0 ? "flex" : "none";
+  canvas.style.visibility = state.images.length === 0 ? "hidden" : "visible";
+}
+
+function drawSelection(item) {
+  const z = state.zoom;
+  // Safelight outline
+  ctx.save();
+  ctx.strokeStyle = "#ff6b35";
+  ctx.lineWidth = 2 / z;
+  ctx.strokeRect(item.x, item.y, item.w, item.h);
+  ctx.restore();
+
+  // Handles encode behavior: square corners lock aspect, bars stretch one axis
+  for (const h of handlePositions(item)) {
+    drawHandle(h.name, h.x, h.y, z);
+  }
+}
+
+function drawHandle(name, x, y, z) {
+  ctx.save();
+  ctx.fillStyle = "#ff6b35";
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 1.5 / z;
+  const corner = CORNERS.has(name);
+
+  let w, h;
+  if (corner) {
+    w = h = 13 / z;
+  } else if (name === "n" || name === "s") {
+    w = 22 / z; h = 7 / z;       // horizontal bar → vertical stretch
+  } else {
+    w = 7 / z; h = 22 / z;       // vertical bar → horizontal stretch
+  }
+
+  const rx = x - w / 2, ry = y - h / 2, r = 3 / z;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(rx, ry, w, h, r);
+  else ctx.rect(rx, ry, w, h);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function handlePositions(item) {
+  const { x, y, w, h } = item;
+  const mx = x + w / 2, my = y + h / 2;
+  return [
+    { name: "nw", x, y },
+    { name: "n", x: mx, y },
+    { name: "ne", x: x + w, y },
+    { name: "e", x: x + w, y: my },
+    { name: "se", x: x + w, y: y + h },
+    { name: "s", x: mx, y: y + h },
+    { name: "sw", x, y: y + h },
+    { name: "w", x, y: my },
+  ];
+}
+
+const CURSORS = {
+  nw: "nwse-resize", se: "nwse-resize",
+  ne: "nesw-resize", sw: "nesw-resize",
+  n: "ns-resize", s: "ns-resize",
+  e: "ew-resize", w: "ew-resize",
+};
+
+/* ============================================================
+   CANVAS INTERACTION — select, move, resize (pointer events)
+   ============================================================ */
+function toCanvasCoords(e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    mx: (e.clientX - rect.left) / state.zoom,
+    my: (e.clientY - rect.top) / state.zoom,
+  };
+}
+
+function currentItems() { return state.pages[state.currentPage] || []; }
+
+function hitHandle(mx, my) {
+  const sel = currentItems().find(p => p.id === state.selectedId);
+  if (!sel) return null;
+  const threshold = 15 / state.zoom;
+  for (const h of handlePositions(sel)) {
+    if (Math.abs(mx - h.x) < threshold && Math.abs(my - h.y) < threshold) return h.name;
+  }
+  return null;
+}
+
+function hitImage(mx, my) {
+  const items = currentItems();
+  for (let i = items.length - 1; i >= 0; i--) {
+    const p = items[i];
+    if (mx >= p.x && mx <= p.x + p.w && my >= p.y && my <= p.y + p.h) return p;
+  }
+  return null;
+}
+
+canvas.addEventListener("pointerdown", e => {
+  const { mx, my } = toCanvasCoords(e);
+
+  const handle = hitHandle(mx, my);
+  if (handle) {
+    const sel = currentItems().find(p => p.id === state.selectedId);
+    state.drag = { mode: "resize", handle, startX: mx, startY: my, origin: { ...sel } };
+    canvas.setPointerCapture(e.pointerId);
+    return;
+  }
+
+  const hit = hitImage(mx, my);
+  if (hit) {
+    state.selectedId = hit.id;
+    state.drag = { mode: "move", startX: mx, startY: my, origin: { x: hit.x, y: hit.y } };
+    canvas.setPointerCapture(e.pointerId);
+    renderList();
+    renderCanvas();
+  } else if (state.selectedId !== null) {
+    state.selectedId = null;
+    renderList();
+    renderCanvas();
+  }
+});
+
+canvas.addEventListener("pointermove", e => {
+  const { mx, my } = toCanvasCoords(e);
+
+  if (state.drag) {
+    const item = currentItems().find(p => p.id === state.selectedId);
+    if (!item) return;
+    if (state.drag.mode === "move") moveItem(item, mx, my);
+    else resizeItem(item, mx, my);
+    renderCanvas();
+    return;
+  }
+
+  // Idle cursor feedback
+  const handle = hitHandle(mx, my);
+  if (handle) canvas.style.cursor = CURSORS[handle] || "default";
+  else canvas.style.cursor = hitImage(mx, my) ? "move" : "default";
+});
+
+function endDrag(e) {
+  if (!state.drag) return;
+  state.drag = null;
+  if (e && canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+}
+canvas.addEventListener("pointerup", endDrag);
+canvas.addEventListener("pointercancel", endDrag);
+
+function moveItem(item, mx, my) {
+  const { origin, startX, startY } = state.drag;
+  item.x = origin.x + (mx - startX);
+  item.y = origin.y + (my - startY);
+}
+
+function resizeItem(item, mx, my) {
+  const { handle, startX, startY, origin } = state.drag;
+  const dx = mx - startX, dy = my - startY;
+  const src = state.images.find(m => m.id === item.id);
+  const aspect = src && src.origH > 0 ? src.origW / src.origH : origin.w / origin.h;
+
+  if (CORNERS.has(handle)) {
+    // Aspect-locked from the anchored (opposite) corner
+    const anchorX = handle === "nw" || handle === "sw" ? origin.x + origin.w : origin.x;
+    const anchorY = handle === "nw" || handle === "ne" ? origin.y + origin.h : origin.y;
+    const dirX = handle === "ne" || handle === "se" ? 1 : -1;
+    let newW = Math.max(MIN_SIZE, origin.w + dirX * dx);
+    let newH = newW / aspect;
+    item.w = newW;
+    item.h = newH;
+    item.x = handle === "nw" || handle === "sw" ? anchorX - newW : anchorX;
+    item.y = handle === "nw" || handle === "ne" ? anchorY - newH : anchorY;
+  } else if (handle === "e") {
+    item.w = Math.max(MIN_SIZE, origin.w + dx);
+  } else if (handle === "w") {
+    item.w = Math.max(MIN_SIZE, origin.w - dx);
+    item.x = origin.x + origin.w - item.w;
+  } else if (handle === "s") {
+    item.h = Math.max(MIN_SIZE, origin.h + dy);
+  } else if (handle === "n") {
+    item.h = Math.max(MIN_SIZE, origin.h - dy);
+    item.y = origin.y + origin.h - item.h;
+  }
+}
+
+/* Keyboard: remove selected, deselect */
+document.addEventListener("keydown", e => {
+  if (state.selectedId === null) return;
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  if (e.key === "Delete" || e.key === "Backspace") {
+    e.preventDefault();
+    removeImage(state.selectedId);
+  } else if (e.key === "Escape") {
+    state.selectedId = null;
+    renderList();
+    renderCanvas();
+  }
+});
+
+/* ============================================================
+   EXPORT
+   ============================================================ */
+$("btnExport").addEventListener("click", () => exportPage(state.currentPage));
+$("btnExportAll").addEventListener("click", () => {
+  for (let p = 0; p < state.totalPages; p++) exportPage(p);
+});
+
+function exportPage(pg) {
+  const items = state.pages[pg] || [];
+  const out = document.createElement("canvas");
+  out.width = state.canvasW;
+  out.height = state.canvasH;
+  const octx = out.getContext("2d");
+  octx.fillStyle = "#ffffff";
+  octx.fillRect(0, 0, state.canvasW, state.canvasH);
+
+  for (const item of items) {
+    const src = state.images.find(m => m.id === item.id);
+    if (src) octx.drawImage(src.img, item.x, item.y, item.w, item.h);
+  }
+
+  out.toBlob(blob => {
+    if (!blob) { toast("导出失败，请重试"); return; }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.download = `merged_page${pg + 1}.png`;
+    link.href = url;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, "image/png");
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+window.addEventListener("resize", applyZoom);
+fitZoom();
+renderCanvas();
+updatePager();
+updateExportButtons();
+</script>
+</body>
+</html>
